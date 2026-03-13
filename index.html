@@ -1,0 +1,104 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="description" content="Browse and customize 3D printable glasses frames. Design your perfect pair with our interactive customizer." />
+  <title>Lens|Zone — 3D Printable Glasses</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=Space+Grotesk:wght@400;500;600;700&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="style.css" />
+</head>
+<body>
+
+  <!-- NAV -->
+  <header class="navbar">
+    <div class="nav-inner">
+      <div class="nav-logo">
+        <span class="logo-icon">⬡</span>
+        <span class="logo-text">Lens<span style="opacity:0.5;margin:0 2px;">|</span>Zone</span>
+      </div>
+      <nav class="nav-tabs">
+        <button class="nav-tab active" data-tab="home" id="tab-home">Home</button>
+        <button class="nav-tab pulse-tab" data-tab="customizer" id="tab-customizer">✦ Customizer</button>
+      </nav>
+      <button class="nav-cta" onclick="switchTab('customizer')">Start Designing</button>
+    </div>
+  </header>
+
+  <!-- PAGES -->
+  <main id="main-content">
+
+    <!-- HOME TAB -->
+    <section class="page active" id="page-home">
+      <div class="hero">
+        <div class="hero-bg-orbs">
+          <div class="orb orb1"></div>
+          <div class="orb orb2"></div>
+          <div class="orb orb3"></div>
+        </div>
+        <div class="hero-content">
+          <span class="hero-badge">🖨️ Hackathon Project · Singapore 2026</span>
+          <h1 class="hero-title">Design Your Perfect<br /><span class="gradient-text">3D Printed Frames</span></h1>
+          <p class="hero-sub">Browse a curated library of printable glasses frames, fully customizable to your face's exact measurements. Download STL files and print at home or with any 3D printing service.</p>
+          <div class="hero-actions">
+            <button class="btn-primary" onclick="switchTab('customizer')">Open Customizer</button>
+          </div>
+          <div class="hero-stats">
+            <div class="stat"><span class="stat-val">12</span><span class="stat-lbl">Frame Styles</span></div>
+            <div class="stat-div"></div>
+            <div class="stat"><span class="stat-val">∞</span><span class="stat-lbl">Combinations</span></div>
+            <div class="stat-div"></div>
+            <div class="stat"><span class="stat-val">Free</span><span class="stat-lbl">STL Export</span></div>
+          </div>
+        </div>
+        <div class="hero-visual">
+          <div class="floating-glasses" id="hero-glasses">
+            <svg viewBox="0 0 320 120" xmlns="http://www.w3.org/2000/svg">
+              <defs>
+                <linearGradient id="glassGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+                  <stop offset="0%" style="stop-color:#a78bfa"/>
+                  <stop offset="100%" style="stop-color:#06b6d4"/>
+                </linearGradient>
+              </defs>
+              <!-- Left lens -->
+              <rect x="10" y="20" width="115" height="80" rx="22" ry="22" fill="none" stroke="url(#glassGrad)" stroke-width="6"/>
+              <!-- Right lens -->
+              <rect x="195" y="20" width="115" height="80" rx="22" ry="22" fill="none" stroke="url(#glassGrad)" stroke-width="6"/>
+              <!-- Bridge -->
+              <line x1="125" y1="60" x2="195" y2="60" stroke="url(#glassGrad)" stroke-width="5" stroke-linecap="round"/>
+              <!-- Left temple -->
+              <line x1="10" y1="55" x2="-20" y2="55" stroke="url(#glassGrad)" stroke-width="5" stroke-linecap="round"/>
+              <!-- Right temple -->
+              <line x1="310" y1="55" x2="340" y2="55" stroke="url(#glassGrad)" stroke-width="5" stroke-linecap="round"/>
+            </svg>
+          </div>
+          <div class="hero-glass-label">Hover me to see styles →</div>
+        </div>
+      </div>
+
+    </section>
+
+
+    <!-- CUSTOMIZER TAB — powered by React -->
+    <section class="page" id="page-customizer">
+      <div class="react-customizer-wrapper">
+        <iframe
+          id="customizer-frame"
+          src="customizer/dist/index.html"
+          title="Lens|Zone React Customizer"
+          allow="same-origin"
+          sandbox="allow-scripts allow-same-origin allow-forms"
+        ></iframe>
+      </div>
+    </section>
+
+  </main>
+
+  <!-- TOAST -->
+  <div class="toast" id="toast"></div>
+
+  <script src="app.js"></script>
+</body>
+</html>
