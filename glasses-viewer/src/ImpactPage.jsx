@@ -10,7 +10,7 @@ import { motion, useInView, animate } from "framer-motion";
 function BlurText({ text, delay = 80, className = "", style = {} }) {
   const words = text.split(" ");
   return (
-    <span style={{ display: "flex", flexWrap: "wrap", gap: "0.3em", ...style }} className={className}>
+<span style={{ display: "flex", flexWrap: "wrap", gap: "0.3em", justifyContent: "center", ...style }} className={className}>
       {words.map((word, i) => (
         <motion.span
           key={i}
@@ -168,7 +168,7 @@ export default function ImpactPage() {
       </section>
 
       {/* ═══ THE BIGGER PICTURE ═══ */}
-      <section style={{ marginBottom: 80, textAlign: "left" }}>
+      <section style={{ marginBottom: 80, textAlign: "center" }}>
         <AnimatedContent>
           <p style={{ fontSize: 11, letterSpacing: 3, textTransform: "uppercase", opacity: 0.3, marginBottom: 12, fontWeight: 600 }}>
             The Bigger Picture
@@ -180,19 +180,19 @@ export default function ImpactPage() {
         </AnimatedContent>
 
         <AnimatedContent delay={0.15}>
-          <p style={{ fontSize: 15, lineHeight: 1.9, opacity: 0.45, maxWidth: 650, marginBottom: 16 }}>
+          <p style={{ fontSize: 15, lineHeight: 1.9, opacity: 0.45, maxWidth: 650, margin: "0 auto 16px" }}>
             2.7 billion people worldwide need glasses but can't access or afford them. In Southeast Asia alone, millions of students struggle in school because of uncorrected vision. Traditional eyewear supply chains are expensive, slow, and designed for wealthy markets.
           </p>
         </AnimatedContent>
 
         <AnimatedContent delay={0.2}>
-          <p style={{ fontSize: 15, lineHeight: 1.9, opacity: 0.45, maxWidth: 650, marginBottom: 16 }}>
+          <p style={{ fontSize: 15, lineHeight: 1.9, opacity: 0.45, maxWidth: 650, margin: "0 auto 16px" }}>
             OPTIQ's approach changes that equation entirely. By 3D printing from recycled plastic, we eliminate traditional manufacturing overhead, reduce cost by over 80%, and produce on-demand with zero waste. Every pair is custom-fitted.
           </p>
         </AnimatedContent>
 
         <AnimatedContent delay={0.25}>
-          <p style={{ fontSize: 15, lineHeight: 1.9, opacity: 0.45, maxWidth: 650 }}>
+          <p style={{ fontSize: 15, lineHeight: 1.9, opacity: 0.45, maxWidth: 650, margin: "0 auto" }}>
             The same technology, materials, and supply chain we're building for eyewear scales directly into prosthetic limbs, hearing aids, orthotics, and other assistive devices. Team Quincers and OPTIQ are committed to making reliable support affordable for everyone who needs it.
           </p>
         </AnimatedContent>
