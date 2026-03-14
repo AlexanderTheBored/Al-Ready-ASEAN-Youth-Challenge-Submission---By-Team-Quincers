@@ -629,18 +629,72 @@ export default function GlassesViewer() {
                   </OptCard>
                 ))}
               </div>
-              {/* dimension reference */}
-              <div style={{ marginTop: 16, padding: 14, borderRadius: 12, background: "rgba(255,255,255,0.02)", border: "1px solid rgba(255,255,255,0.04)" }}>
-                <svg viewBox="0 0 260 90" style={{ width: "100%", height: "auto", opacity: 0.35 }}>
-                  <ellipse cx="70" cy="42" rx="42" ry="28" fill="none" stroke="#fff" strokeWidth="1.5" />
-                  <ellipse cx="190" cy="42" rx="42" ry="28" fill="none" stroke="#fff" strokeWidth="1.5" />
-                  <path d="M112 36 Q130 26 148 36" fill="none" stroke="#fff" strokeWidth="1.5" />
-                  <line x1="28" y1="78" x2="112" y2="78" stroke="#fff" strokeWidth="0.8" />
-                  <text x="70" y="86" fill="#fff" fontSize="7" textAnchor="middle" fontFamily="DM Sans">{frame.dimensions.lens}</text>
-                  <line x1="112" y1="24" x2="148" y2="24" stroke="#fff" strokeWidth="0.8" />
-                  <text x="130" y="20" fill="#fff" fontSize="7" textAnchor="middle" fontFamily="DM Sans">{frame.dimensions.bridge}</text>
-                </svg>
-              </div>
+              {/* dimension diagram - matches actual 3D geometry, scales with size */}
+              {(() => {
+                const sc = [0.88, 1.0, 1.1][sizeIdx];
+                const cx = 140, cy = 46;
+                const sw = size.width;
+                /* mirror helper: takes left-side x, returns right-side x */
+                const mx = (x) => cx + (cx - x);
+
+                return (
+                  <div style={{ marginTop: 16, padding: "18px 14px 12px", borderRadius: 12, background: "rgba(255,255,255,0.02)", border: "1px solid rgba(255,255,255,0.04)" }}>
+                    <svg viewBox="0 0 280 110" style={{ width: "100%", height: "auto", opacity: 0.4 }}>
+                      <g transform={`translate(${cx},${cy}) scale(${sc}) translate(${-cx},${-cy})`}>
+
+                        {/* AVIATOR - teardrop with double bridge */}
+                        {frame.id === "aviator" && (<>
+                          <path d={`M72 20 Q105 18 110 46 Q105 78 72 80 Q39 78 34 46 Q39 18 72 20Z`} fill="none" stroke="#fff" strokeWidth="1.4" />
+                          <path d={`M${mx(72)} 20 Q${mx(105)} 18 ${mx(110)} 46 Q${mx(105)} 78 ${mx(72)} 80 Q${mx(39)} 78 ${mx(34)} 46 Q${mx(39)} 18 ${mx(72)} 20Z`} fill="none" stroke="#fff" strokeWidth="1.4" />
+                          <path d={`M110 37 Q${cx} 28 ${mx(110)} 37`} fill="none" stroke="#fff" strokeWidth="1.2" />
+                          <path d={`M110 44 Q${cx} 36 ${mx(110)} 44`} fill="none" stroke="#fff" strokeWidth="0.8" />
+                        </>)}
+
+                        {/* WAYFARER - angular trapezoid with thick top bar */}
+                        {frame.id === "wayfarer" && (<>
+                          <path d={`M36 28 L108 24 Q113 46 108 68 L36 72 Q30 46 36 28Z`} fill="none" stroke="#fff" strokeWidth="1.4" />
+                          <path d={`M${mx(36)} 28 L${mx(108)} 24 Q${mx(113)} 46 ${mx(108)} 68 L${mx(36)} 72 Q${mx(30)} 46 ${mx(36)} 28Z`} fill="none" stroke="#fff" strokeWidth="1.4" />
+                          <rect x="28" y="20" width="224" height="6" rx="2" fill="rgba(255,255,255,0.3)" stroke="#fff" strokeWidth="0.8" />
+                          <path d={`M108 34 Q${cx} 26 ${mx(108)} 34`} fill="none" stroke="#fff" strokeWidth="1.2" />
+                        </>)}
+
+                        {/* ROUND - perfect circles */}
+                        {frame.id === "round" && (<>
+                          <circle cx="72" cy={cy} r="28" fill="none" stroke="#fff" strokeWidth="1.3" />
+                          <circle cx={mx(72)} cy={cy} r="28" fill="none" stroke="#fff" strokeWidth="1.3" />
+                          <path d={`M100 36 Q110 28 120 30 Q160 28 ${mx(100)} 36`} fill="none" stroke="#fff" strokeWidth="1.2" />
+                        </>)}
+
+                        {/* CAT-EYE - dramatic upswept */}
+                        {frame.id === "cat-eye" && (<>
+                          <path d={`M38 52 Q36 30 52 24 Q72 18 98 20 Q112 26 110 46 Q108 68 78 74 Q50 74 38 52Z`} fill="none" stroke="#fff" strokeWidth="1.4" />
+                          <path d={`M${mx(38)} 52 Q${mx(36)} 30 ${mx(52)} 24 Q${mx(72)} 18 ${mx(98)} 20 Q${mx(112)} 26 ${mx(110)} 46 Q${mx(108)} 68 ${mx(78)} 74 Q${mx(50)} 74 ${mx(38)} 52Z`} fill="none" stroke="#fff" strokeWidth="1.4" />
+                          <path d={`M110 32 Q${cx} 24 ${mx(110)} 32`} fill="none" stroke="#fff" strokeWidth="1.2" />
+                        </>)}
+
+                        {/* temple arms (subtle, all frames) */}
+                        <line x1="10" y1={cy} x2="30" y2={cy} stroke="#fff" strokeWidth="0.8" strokeLinecap="round" opacity="0.4" />
+                        <line x1={mx(10)} y1={cy} x2={mx(30)} y2={cy} stroke="#fff" strokeWidth="0.8" strokeLinecap="round" opacity="0.4" />
+
+                      </g>
+
+                      {/* measurement lines stay outside the scale group so text doesn't stretch */}
+                      {/* lens width */}
+                      <line x1="34" y1="92" x2="110" y2="92" stroke="#fff" strokeWidth="0.6" />
+                      <line x1="34" y1="89" x2="34" y2="95" stroke="#fff" strokeWidth="0.6" />
+                      <line x1="110" y1="89" x2="110" y2="95" stroke="#fff" strokeWidth="0.6" />
+                      <text x="72" y="102" fill="#fff" fontSize="8" textAnchor="middle" fontFamily="DM Sans" fontWeight="500">{frame.dimensions.lens}</text>
+                      {/* bridge */}
+                      <line x1="112" y1="10" x2="168" y2="10" stroke="#fff" strokeWidth="0.6" />
+                      <line x1="112" y1="7" x2="112" y2="13" stroke="#fff" strokeWidth="0.6" />
+                      <line x1="168" y1="7" x2="168" y2="13" stroke="#fff" strokeWidth="0.6" />
+                      <text x="140" y="8" fill="#fff" fontSize="8" textAnchor="middle" fontFamily="DM Sans" fontWeight="500">{frame.dimensions.bridge}</text>
+                      {/* total width */}
+                      <text x="140" y="110" fill="#fff" fontSize="7" textAnchor="middle" fontFamily="DM Sans" opacity="0.45">total width: {sw}</text>
+                    </svg>
+                  </div>
+                );
+              })()}
             </>)}
 
             {/* STEP 5: SUMMARY */}
