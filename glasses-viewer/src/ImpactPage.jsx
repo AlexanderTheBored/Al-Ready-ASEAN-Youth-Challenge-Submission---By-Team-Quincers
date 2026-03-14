@@ -1,16 +1,11 @@
 import { useEffect, useRef, useState, useCallback } from "react";
 import { motion, useInView, animate } from "framer-motion";
 
-/* ═══════════════════════════════════════════════════════════
-   ReactBits-inspired components (BlurText, CountUp, etc.)
-   Patterns from: https://reactbits.dev
-   ═══════════════════════════════════════════════════════════ */
-
 /* ── BlurText: words animate from blurred to focused ────── */
 function BlurText({ text, delay = 80, className = "", style = {} }) {
   const words = text.split(" ");
   return (
-<span style={{ display: "flex", flexWrap: "wrap", gap: "0.3em", justifyContent: "center", ...style }} className={className}>
+    <span style={{ display: "flex", flexWrap: "wrap", gap: "0.3em", justifyContent: "center", ...style }} className={className}>
       {words.map((word, i) => (
         <motion.span
           key={i}
@@ -87,9 +82,6 @@ function AnimatedContent({ children, direction = "up", delay = 0, style = {} }) 
   );
 }
 
-/* ═══════════════════════════════════════════════════════════
-   PROCESS STEPS DATA
-   ═══════════════════════════════════════════════════════════ */
 const PROCESS = [
   { num: "01", title: "Collect", desc: "Bottle caps and PET containers are collected from local communities, schools, and recycling partners across Southeast Asia.", icon: "♻" },
   { num: "02", title: "Shred & Clean", desc: "Collected plastic is sorted by type, shredded into flakes, thoroughly washed, and dried to remove contaminants.", icon: "⚙" },
@@ -98,12 +90,7 @@ const PROCESS = [
   { num: "05", title: "Assemble & Ship", desc: "Lenses are fitted, hinges attached, and quality checked before shipping directly to the customer.", icon: "→" },
 ];
 
-/* ═══════════════════════════════════════════════════════════
-   MAIN IMPACT PAGE COMPONENT
-   ═══════════════════════════════════════════════════════════ */
 export default function ImpactPage() {
-
-  /* inject gradient animation keyframe */
   useEffect(() => {
     const id = "gv-impact-styles";
     if (document.getElementById(id)) return;
@@ -118,7 +105,7 @@ export default function ImpactPage() {
   return (
     <div style={{ width: "100%", maxWidth: 900, margin: "0 auto", padding: "0 24px 80px", textAlign: "left" }}>
 
-      {/* ═══ HERO ═══ */}
+      {/* HERO */}
       <section style={{ paddingTop: 60, paddingBottom: 60, textAlign: "center" }}>
         <AnimatedContent>
           <p style={{ fontSize: 11, letterSpacing: 3, textTransform: "uppercase", opacity: 0.35, marginBottom: 20, fontWeight: 600 }}>
@@ -145,7 +132,7 @@ export default function ImpactPage() {
         </AnimatedContent>
       </section>
 
-      {/* ═══ STATS ═══ */}
+      {/* STATS */}
       <section style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(160px, 1fr))", gap: 16, marginBottom: 80 }}>
         {[
           { target: 82, suffix: "%", label: "Less CO2 vs virgin plastic", color: "#6fcf97" },
@@ -167,7 +154,7 @@ export default function ImpactPage() {
         ))}
       </section>
 
-      {/* ═══ THE BIGGER PICTURE ═══ */}
+      {/* THE BIGGER PICTURE */}
       <section style={{ marginBottom: 80, textAlign: "center" }}>
         <AnimatedContent>
           <p style={{ fontSize: 11, letterSpacing: 3, textTransform: "uppercase", opacity: 0.3, marginBottom: 12, fontWeight: 600 }}>
@@ -198,7 +185,7 @@ export default function ImpactPage() {
         </AnimatedContent>
       </section>
 
-      {/* ═══ COST COMPARISON ═══ */}
+      {/* COST COMPARISON */}
       <section style={{ marginBottom: 80, textAlign: "left" }}>
         <AnimatedContent>
           <p style={{ fontSize: 11, letterSpacing: 3, textTransform: "uppercase", opacity: 0.3, marginBottom: 12, fontWeight: 600 }}>
@@ -260,7 +247,7 @@ export default function ImpactPage() {
         </AnimatedContent>
       </section>
 
-      {/* ═══ PROCESS TIMELINE ═══ */}
+      {/* PROCESS TIMELINE */}
       <section style={{ marginBottom: 80, textAlign: "left" }}>
         <AnimatedContent>
           <p style={{ fontSize: 11, letterSpacing: 3, textTransform: "uppercase", opacity: 0.3, marginBottom: 12, fontWeight: 600 }}>
@@ -300,7 +287,7 @@ export default function ImpactPage() {
         </div>
       </section>
 
-      {/* ═══ COMMUNITY IMPACT ═══ */}
+      {/* COMMUNITY IMPACT */}
       <section style={{ marginBottom: 80, textAlign: "left" }}>
         <AnimatedContent>
           <p style={{ fontSize: 11, letterSpacing: 3, textTransform: "uppercase", opacity: 0.3, marginBottom: 12, fontWeight: 600 }}>
@@ -335,7 +322,7 @@ export default function ImpactPage() {
         </div>
       </section>
 
-      {/* ═══ CLOSING / VISION ═══ */}
+      {/* CLOSING / VISION */}
       <section style={{ textAlign: "center", paddingBottom: 40 }}>
         <AnimatedContent>
           <div style={{
