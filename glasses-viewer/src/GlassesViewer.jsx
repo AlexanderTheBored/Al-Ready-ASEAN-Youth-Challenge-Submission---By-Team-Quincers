@@ -462,8 +462,7 @@ export default function GlassesViewer() {
       </nav>
 
       {/* MAIN */}
-      <div className="gv-main" style={{ flex: 1, maxWidth: 1200, width: "100%", margin: "0 auto", padding: "24px 24px", display: page === "configurator" ? "flex" : "none", gap: 40, alignItems: "flex-start", flexWrap: "wrap", position: "relative", zIndex: 2, boxSizing: "border-box" }}>
-
+<div className="gv-main" style={{ flex: page === "configurator" ? 1 : "0 0 0px", maxWidth: 1200, width: "100%", margin: "0 auto", padding: "24px 24px", display: "flex", height: page === "configurator" ? "auto" : 0, overflow: page === "configurator" ? "visible" : "hidden", visibility: page === "configurator" ? "visible" : "hidden", pointerEvents: page === "configurator" ? "auto" : "none", gap: 40, alignItems: "flex-start", flexWrap: "wrap", boxSizing: "border-box" }}>
         {/* 3D VIEWPORT */}
         <div style={{ flex: "1 1 480px", minWidth: 320, position: "relative" }}>
           <div style={{ position: "relative" }}>
