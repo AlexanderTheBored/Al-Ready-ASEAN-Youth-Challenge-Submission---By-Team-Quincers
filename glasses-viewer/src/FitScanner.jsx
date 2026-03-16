@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState, useCallback } from "react";
-import { FaceLandmarker, FilesetResolver, DrawingUtils } from "@mediapipe/tasks-vision";
+import { FaceLandmarker, FilesetResolver } from "@mediapipe/tasks-vision";
 
 /* ═══════════════════════════════════════════════════════════
    FACE MEASUREMENT HELPERS
@@ -126,7 +126,40 @@ function ScanRing({ active, progress }) {
 }
 
 /* ═══════════════════════════════════════════════════════════
+   COUNTDOWN OVERLAY
+   ═══════════════════════════════════════════════════════════ */
+function CountdownOverlay({ count }) {
+  return (
+    <div style={{
+      position: "absolute", inset: 0, display: "flex", flexDirection: "column",
+      alignItems: "center", justifyContent: "center", gap: 12,
+      background: "rgba(0,0,0,0.5)", backdropFilter: "blur(4px)",
+      zIndex: 5,
+    }}>
+      <div key={count} style={{
+        width: 100, height: 100, borderRadius: "50%",
+        border: "3px solid rgba(111,207,151,0.6)",
+        display: "flex", alignItems: "center", justifyContent: "center",
+        animation: "gvCountPulse 1s ease both",
+      }}>
+        <span style={{
+          fontFamily: "'Playfair Display', serif", fontSize: 52, fontWeight: 600,
+          color: "#6fcf97", lineHeight: 1,
+        }}>
+          {count}
+        </span>
+      </div>
+      <p style={{ fontSize: 12, opacity: 0.6, letterSpacing: 1.5, textTransform: "uppercase", fontWeight: 600 }}>
+        Hold still...
+      </p>
+    </div>
+  );
+}
+
+/* ═══════════════════════════════════════════════════════════
    MAIN COMPONENT
+
+   Flow: idle → loading → ready → countdown → scanning → complete
    ═══════════════════════════════════════════════════════════ */
 export default function FitScanner({ onApplyFit }) {
   const videoRef = useRef(null);
@@ -134,19 +167,36 @@ export default function FitScanner({ onApplyFit }) {
   const faceLandmarkerRef = useRef(null);
   const animFrameRef = useRef(null);
   const streamRef = useRef(null);
+  const countdownRef = useRef(null);
 
-  const [status, setStatus] = useState("idle"); /* idle | loading | scanning | complete | error */
+  const [status, setStatus] = useState("idle"); /* idle | loading | ready | countdown | scanning | complete | error */
   const [measurements, setMeasurements] = useState(null);
   const [recommendation, setRecommendation] = useState(null);
   const [scanProgress, setScanProgress] = useState(0);
-  const [stableSamples, setStableSamples] = useState([]);
   const [cameraError, setCameraError] = useState(null);
+  const [confirmed, setConfirmed] = useState(false);
+  const [countdownValue, setCountdownValue] = useState(3);
 
   const SAMPLES_NEEDED = 20;
 
+  /* ── inject countdown animation ── */
+  useEffect(() => {
+    const id = "gv-countdown-styles";
+    if (document.getElementById(id)) return;
+    const s = document.createElement("style");
+    s.id = id;
+    s.textContent = `
+      @keyframes gvCountPulse {
+        0% { transform: scale(0.6); opacity: 0; }
+        30% { transform: scale(1.1); opacity: 1; }
+        100% { transform: scale(1); opacity: 1; }
+      }
+    `;
+    document.head.appendChild(s);
+  }, []);
+
   /* ── initialize MediaPipe ── */
   const initFaceLandmarker = useCallback(async () => {
-    setStatus("loading");
     try {
       const vision = await FilesetResolver.forVisionTasks(
         "https://cdn.jsdelivr.net/npm/@mediapipe/tasks-vision@latest/wasm"
@@ -194,6 +244,7 @@ export default function FitScanner({ onApplyFit }) {
   /* ── stop camera ── */
   const stopCamera = useCallback(() => {
     if (animFrameRef.current) cancelAnimationFrame(animFrameRef.current);
+    if (countdownRef.current) clearInterval(countdownRef.current);
     if (streamRef.current) {
       streamRef.current.getTracks().forEach((t) => t.stop());
       streamRef.current = null;
@@ -278,7 +329,6 @@ export default function FitScanner({ onApplyFit }) {
         const m = computeMeasurements(landmarks);
         samples.push(m);
         setScanProgress(Math.min(samples.length / SAMPLES_NEEDED, 1));
-        setStableSamples([...samples]);
 
         if (samples.length >= SAMPLES_NEEDED) {
           /* average all samples for stability */
@@ -303,13 +353,15 @@ export default function FitScanner({ onApplyFit }) {
     detect();
   }, []);
 
-  /* ── main start flow ── */
+  /* ── main start flow: load model + camera, then show "ready" screen ── */
   const handleStart = useCallback(async () => {
     setScanProgress(0);
     setMeasurements(null);
     setRecommendation(null);
-    setStableSamples([]);
     setCameraError(null);
+    setConfirmed(false);
+    setCountdownValue(3);
+    setStatus("loading");
 
     const modelOk = faceLandmarkerRef.current || (await initFaceLandmarker());
     if (!modelOk) return;
@@ -317,9 +369,27 @@ export default function FitScanner({ onApplyFit }) {
     const camOk = await startCamera();
     if (!camOk) return;
 
-    /* small delay to let camera warm up */
-    setTimeout(() => startDetection(), 500);
-  }, [initFaceLandmarker, startCamera, startDetection]);
+    /* camera is live but we pause here — show the "ready" screen */
+    setStatus("ready");
+  }, [initFaceLandmarker, startCamera]);
+
+  /* ── begin countdown (called when user confirms readiness) ── */
+  const handleBeginCountdown = useCallback(() => {
+    setStatus("countdown");
+    setCountdownValue(3);
+
+    let remaining = 3;
+    countdownRef.current = setInterval(() => {
+      remaining -= 1;
+      if (remaining <= 0) {
+        clearInterval(countdownRef.current);
+        countdownRef.current = null;
+        startDetection();
+      } else {
+        setCountdownValue(remaining);
+      }
+    }, 1000);
+  }, [startDetection]);
 
   /* cleanup on unmount */
   useEffect(() => {
@@ -332,6 +402,40 @@ export default function FitScanner({ onApplyFit }) {
     stopCamera();
     handleStart();
   }, [handleStart, stopCamera]);
+
+  /* ── draw live camera preview during "ready" and "countdown" ── */
+  useEffect(() => {
+    if (status !== "ready" && status !== "countdown") return;
+    const video = videoRef.current;
+    const canvas = canvasRef.current;
+    if (!video || !canvas) return;
+
+    let raf;
+    const drawPreview = () => {
+      raf = requestAnimationFrame(drawPreview);
+      if (video.readyState < 2) return;
+      canvas.width = video.videoWidth;
+      canvas.height = video.videoHeight;
+      const ctx = canvas.getContext("2d");
+      ctx.save();
+      ctx.scale(-1, 1);
+      ctx.drawImage(video, -canvas.width, 0, canvas.width, canvas.height);
+      ctx.restore();
+
+      /* subtle face oval guide */
+      const cx = canvas.width / 2;
+      const cy = canvas.height / 2;
+      ctx.beginPath();
+      ctx.ellipse(cx, cy, canvas.width * 0.18, canvas.height * 0.32, 0, 0, Math.PI * 2);
+      ctx.strokeStyle = "rgba(111,207,151,0.25)";
+      ctx.lineWidth = 2;
+      ctx.setLineDash([8, 6]);
+      ctx.stroke();
+      ctx.setLineDash([]);
+    };
+    drawPreview();
+    return () => cancelAnimationFrame(raf);
+  }, [status]);
 
   return (
     <div style={{ width: "100%", maxWidth: 900, margin: "0 auto", padding: "0 24px 80px", textAlign: "left" }}>
@@ -352,16 +456,20 @@ export default function FitScanner({ onApplyFit }) {
       {/* CAMERA VIEWPORT */}
       <div style={{ position: "relative", width: "100%", maxWidth: 560, margin: "0 auto 32px", aspectRatio: "4/3", borderRadius: 20, overflow: "hidden", background: "#0a0a0c", border: "1px solid rgba(255,255,255,0.06)" }}>
 
-        {/* video + canvas (hidden until started) */}
+        {/* video + canvas (hidden until camera is active) */}
         <video ref={videoRef} playsInline muted style={{ display: "none" }} />
         <canvas ref={canvasRef} style={{
-          width: "100%", height: "100%", objectFit: "cover", display: status === "scanning" || status === "complete" ? "block" : "none",
+          width: "100%", height: "100%", objectFit: "cover",
+          display: (status === "ready" || status === "countdown" || status === "scanning" || status === "complete") ? "block" : "none",
         }} />
 
         {/* scan ring overlay */}
         {status === "scanning" && <ScanRing active={true} progress={scanProgress} />}
 
-        {/* idle state */}
+        {/* countdown overlay */}
+        {status === "countdown" && <CountdownOverlay count={countdownValue} />}
+
+        {/* ── IDLE STATE ── */}
         {status === "idle" && (
           <div style={{ position: "absolute", inset: 0, display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", gap: 16, padding: 32 }}>
             <div style={{ width: 80, height: 80, borderRadius: "50%", border: "2px solid rgba(111,207,151,0.3)", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 32 }}>
@@ -379,15 +487,114 @@ export default function FitScanner({ onApplyFit }) {
           </div>
         )}
 
-        {/* loading state */}
+        {/* ── LOADING STATE ── */}
         {status === "loading" && (
           <div style={{ position: "absolute", inset: 0, display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", gap: 12 }}>
             <div style={{ width: 32, height: 32, border: "2px solid rgba(111,207,151,0.3)", borderTopColor: "#6fcf97", borderRadius: "50%", animation: "gvSpin 0.8s linear infinite" }} />
-            <p style={{ fontSize: 13, opacity: 0.5 }}>Loading AI model...</p>
+            <p style={{ fontSize: 13, opacity: 0.5 }}>Loading AI model & camera...</p>
           </div>
         )}
 
-        {/* error state */}
+        {/* ── READY STATE: well-lit area prompt + confirmation ── */}
+        {status === "ready" && (
+          <div style={{
+            position: "absolute", inset: 0, display: "flex", flexDirection: "column",
+            alignItems: "center", justifyContent: "flex-end", padding: "24px 24px 28px",
+            background: "linear-gradient(to bottom, rgba(0,0,0,0) 0%, rgba(0,0,0,0.75) 100%)",
+            zIndex: 5,
+          }}>
+            {/* top badge */}
+            <div style={{
+              position: "absolute", top: 16, left: "50%", transform: "translateX(-50%)",
+              display: "flex", alignItems: "center", gap: 8,
+              padding: "6px 14px", borderRadius: 8,
+              background: "rgba(255,200,50,0.12)", border: "1px solid rgba(255,200,50,0.3)",
+            }}>
+              <span style={{ fontSize: 14 }}>☀</span>
+              <span style={{ fontSize: 11, fontWeight: 600, letterSpacing: 1, textTransform: "uppercase", color: "rgba(255,220,100,0.9)" }}>
+                Good Lighting Required
+              </span>
+            </div>
+
+            <div style={{
+              width: "100%", padding: "18px 20px", borderRadius: 14,
+              background: "rgba(0,0,0,0.6)", backdropFilter: "blur(12px)",
+              border: "1px solid rgba(255,255,255,0.08)",
+              display: "flex", flexDirection: "column", gap: 14,
+            }}>
+              <div>
+                <p style={{ fontSize: 14, fontWeight: 600, margin: "0 0 6px", color: "rgba(255,255,255,0.9)" }}>
+                  Before we scan
+                </p>
+                <p style={{ fontSize: 12, lineHeight: 1.6, opacity: 0.55, margin: 0 }}>
+                  For accurate measurements, make sure you're in a <strong style={{ color: "rgba(255,220,100,0.9)", fontWeight: 600 }}>well-lit area</strong> with
+                  even lighting on your face. Avoid backlighting or harsh shadows. Position your face within the oval guide above.
+                </p>
+              </div>
+
+              {/* checklist items */}
+              <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
+                {[
+                  "Face evenly lit (no harsh shadows)",
+                  "Glasses or sunglasses removed",
+                  "Face centred in the oval guide",
+                ].map((item, i) => (
+                  <div key={i} style={{ display: "flex", alignItems: "center", gap: 8 }}>
+                    <span style={{ fontSize: 10, color: "#6fcf97", opacity: 0.8 }}>✓</span>
+                    <span style={{ fontSize: 11, opacity: 0.45 }}>{item}</span>
+                  </div>
+                ))}
+              </div>
+
+              {/* confirmation checkbox */}
+              <label style={{
+                display: "flex", alignItems: "center", gap: 10, cursor: "pointer",
+                padding: "10px 14px", borderRadius: 10,
+                background: confirmed ? "rgba(111,207,151,0.08)" : "rgba(255,255,255,0.03)",
+                border: confirmed ? "1px solid rgba(111,207,151,0.25)" : "1px solid rgba(255,255,255,0.06)",
+                transition: "all 0.3s",
+              }}>
+                <div style={{
+                  width: 20, height: 20, borderRadius: 6, flexShrink: 0,
+                  border: confirmed ? "2px solid #6fcf97" : "2px solid rgba(255,255,255,0.2)",
+                  background: confirmed ? "rgba(111,207,151,0.2)" : "transparent",
+                  display: "flex", alignItems: "center", justifyContent: "center",
+                  transition: "all 0.3s",
+                }}>
+                  {confirmed && <span style={{ fontSize: 12, color: "#6fcf97", lineHeight: 1 }}>✓</span>}
+                </div>
+                <input
+                  type="checkbox"
+                  checked={confirmed}
+                  onChange={(e) => setConfirmed(e.target.checked)}
+                  style={{ display: "none" }}
+                />
+                <span style={{ fontSize: 12, fontWeight: 500, opacity: confirmed ? 0.9 : 0.5 }}>
+                  I'm in a well-lit area and ready to scan
+                </span>
+              </label>
+
+              {/* begin scan button */}
+              <button
+                onClick={handleBeginCountdown}
+                disabled={!confirmed}
+                style={{
+                  padding: "14px 0", borderRadius: 10, border: "none", cursor: confirmed ? "pointer" : "not-allowed",
+                  background: confirmed ? "rgba(111,207,151,0.9)" : "rgba(111,207,151,0.2)",
+                  color: confirmed ? "#000" : "rgba(0,0,0,0.3)",
+                  fontFamily: "'DM Sans', sans-serif", fontSize: 13, fontWeight: 600,
+                  letterSpacing: 1.5, textTransform: "uppercase",
+                  transition: "all 0.3s", width: "100%",
+                  opacity: confirmed ? 1 : 0.5,
+                }}
+              >
+                Begin Scan
+              </button>
+            </div>
+          </div>
+        )}
+
+        {/* ── ERROR STATE ── */}
         {status === "error" && (
           <div style={{ position: "absolute", inset: 0, display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", gap: 12, padding: 32 }}>
             <p style={{ fontSize: 14, opacity: 0.6, textAlign: "center", color: "#ff6b6b" }}>{cameraError}</p>
