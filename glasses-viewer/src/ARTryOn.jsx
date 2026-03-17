@@ -1,6 +1,7 @@
-import { useEffect, useRef, useState, useCallback } from "react";
+import { useEffect, useRef, useState, useCallback, useMemo } from "react";
 import * as THREE from "three";
 import { FaceLandmarker, FilesetResolver } from "@mediapipe/tasks-vision";
+import { GLTFLoader } from "three/examples/jsm/loaders/GLTFLoader";
 
 /* ═══════════════════════════════════════════════════════════
    GEOMETRY HELPERS (duplicated from GlassesViewer for
@@ -69,6 +70,12 @@ function buildCatEye(color, matPbr) {
 const MATERIAL_PBR = { metalness: 0.05, roughness: 0.55, clearcoat: 0.3, clearcoatRoughness: 0.4 };
 
 const AR_FRAMES = [
+  {
+    id: "custom", name: "Eza Custom Design", url: "/models/glasses.glb",
+    colors: [
+      { name: "Original", frame: 0xffffff, lens: 0xffffff, accent: 0xffffff },
+    ],
+  },
   {
     id: "aviator", name: "Aviator Classic", build: buildAviator,
     colors: [
@@ -244,7 +251,7 @@ function avgLandmark(...lms) {
 }
 
 /* extract position & scale from landmarks, rotation from transformation matrix */
-function extractFacePose(landmarks, vWidth, vHeight, facialMatrix) {
+function extractFacePose(landmarks, vWidth, vHeight, facialMatrix, calibratedFaceWidth = null) {
   const bridge = landmarks[LM.noseBridge];
   const bridgeTop = landmarks[LM.noseBridgeTop];
   const leftEyeO = landmarks[LM.leftEyeOuter];
@@ -254,64 +261,50 @@ function extractFacePose(landmarks, vWidth, vHeight, facialMatrix) {
   const leftTemple = landmarks[LM.leftTemple];
   const rightTemple = landmarks[LM.rightTemple];
 
-  /* ── POSITION (from landmarks — we want glasses on the nose bridge) ── */
-  const innerMid = avgLandmark(leftEyeI, rightEyeI);
-  const anchor = avgLandmark(bridge, bridgeTop, innerMid);
-  const px = (0.5 - anchor.x) * vWidth;
-  const py = -(anchor.y - 0.5) * vHeight + vHeight * 0.015;
-
   /* ── SCALE (from landmarks — face width is reliable) ── */
   const templeW = dist3D(leftTemple, rightTemple);
   const eyeOuterW = dist3D(leftEyeO, rightEyeO);
   const faceW = (templeW * 0.4 + eyeOuterW * 0.6) * vWidth;
   const modelWidth = 1.92;
-  const scale = (faceW / modelWidth) * 1.3;
+
+  let scale;
+  if (calibratedFaceWidth) {
+    // Calibrated path: 1.2x boost for a better aesthetic fit
+    scale = (calibratedFaceWidth * (eyeOuterW / 0.085)) / modelWidth * 1.2;
+  } else {
+    // Heuristic path: boosted from 1.45 to 1.6
+    scale = (faceW / modelWidth) * 1.6;
+  }
 
   /* ── ROTATION (from facial transformation matrix — the real deal) ── */
   let roll = 0, yaw = 0, pitch = 0;
 
   if (facialMatrix && facialMatrix.data) {
-    /* MediaPipe returns a 4x4 column-major matrix as a flat 16-element array.
-       We extract the 3x3 rotation sub-matrix and decompose to Euler angles.
-       Column-major layout:
-         col0: [0,1,2,3]  col1: [4,5,6,7]  col2: [8,9,10,11]  col3: [12,13,14,15]
-       So rotation matrix R:
-         R00=d[0]  R01=d[4]  R02=d[8]
-         R10=d[1]  R11=d[5]  R12=d[9]
-         R20=d[2]  R21=d[6]  R22=d[10]
-    */
     const d = facialMatrix.data;
     const R00 = d[0], R01 = d[4], R02 = d[8];
     const R10 = d[1], R11 = d[5], R12 = d[9];
     const R20 = d[2], R21 = d[6], R22 = d[10];
 
-    /* Decompose to ZYX Euler angles (matches Three.js "ZYX" order):
-       pitch = rotation around X
-       yaw   = rotation around Y
-       roll  = rotation around Z */
     const sy = Math.sqrt(R00 * R00 + R10 * R10);
     const singular = sy < 1e-6;
 
     if (!singular) {
-      pitch = Math.atan2(R21, R22);       /* X rotation */
-      yaw   = Math.atan2(-R20, sy);       /* Y rotation */
-      roll  = Math.atan2(R10, R00);       /* Z rotation */
+      pitch = Math.atan2(R21, R22);
+      yaw   = Math.atan2(-R20, sy);
+      roll  = Math.atan2(R10, R00);
     } else {
       pitch = Math.atan2(-R12, R11);
       yaw   = Math.atan2(-R20, sy);
       roll  = 0;
     }
 
-    /* Mirror yaw and roll for selfie camera (horizontal flip) */
     yaw = -yaw;
     roll = -roll;
 
-    /* Clamp to avoid wild values at detection edges */
     pitch = Math.max(-1.2, Math.min(1.2, pitch));
     yaw   = Math.max(-1.2, Math.min(1.2, yaw));
     roll  = Math.max(-0.8, Math.min(0.8, roll));
   } else {
-    /* Fallback: basic landmark-based rotation if matrix unavailable */
     roll = -Math.atan2(rightEyeO.y - leftEyeO.y, rightEyeO.x - leftEyeO.x);
     const leftDist = Math.abs(bridge.x - leftTemple.x);
     const rightDist = Math.abs(bridge.x - rightTemple.x);
@@ -321,7 +314,25 @@ function extractFacePose(landmarks, vWidth, vHeight, facialMatrix) {
     pitch = 0;
   }
 
-  const depthFromZ = anchor.z * 0.3;
+  /* ── POSITION (Perspective-aware refinement) ── */
+  const innerMid = avgLandmark(leftEyeI, rightEyeI);
+  const anchor = avgLandmark(bridge, bridgeTop, innerMid);
+
+  // Horizontal: Core bridge position (Landmark 6) + Damped Perspective correction
+  // Reverting to the pure nose center for absolute front-view centering.
+  const pxBase = (0.5 - bridge.x) * vWidth;
+
+  // Yaw Correction: Linearized for instant responsiveness during head turns.
+  const noseProtrusionScale = faceW * 0.12; 
+  const yawCorr = Math.sin(yaw) * noseProtrusionScale;
+  const px = pxBase + (yawCorr * vWidth);
+
+  // Vertical: Adjusted to -0.02 (raised from -0.03) for better eye clearance
+  const py = -(anchor.y - 0.5) * vHeight - vHeight * 0.02;
+
+  /* ── DEPTH STABILIZATION ── */
+  const depthScale = (0.085 / eyeOuterW) * 0.15;
+  const depthFromZ = (anchor.z * 0.2) + (depthScale * -1);
 
   return { px, py, scale, roll, yaw, pitch, depthOffset: depthFromZ };
 }
@@ -347,7 +358,7 @@ const FILTER_CONFIG = {
 /* ═══════════════════════════════════════════════════════════
    MAIN COMPONENT
    ═══════════════════════════════════════════════════════════ */
-export default function ARTryOn({ onBack }) {
+export default function ARTryOn({ onBack, faceWidth }) {
   const videoRef = useRef(null);
   const videoCanvasRef = useRef(null);
   const threeContainerRef = useRef(null);
@@ -393,27 +404,104 @@ export default function ARTryOn({ onBack }) {
     document.head.appendChild(s);
   }, []);
 
+  /* ── loader instance ── */
+  const gltfLoader = useMemo(() => new GLTFLoader(), []);
+  const reqIdRef = useRef(0);
+
   /* ── build / rebuild glasses model ── */
-  const buildGlasses = useCallback((fIdx, cIdx) => {
+  const buildGlasses = useCallback(async (fIdx, cIdx) => {
     const { scene, glasses: old } = sceneRef.current;
     if (!scene) return;
+
+    const f = AR_FRAMES[fIdx];
+    const reqId = ++reqIdRef.current;
+
+    let model;
+    if (f.url) {
+      try {
+        const gltf = await new Promise((resolve, reject) => {
+          gltfLoader.load(f.url, resolve, undefined, reject);
+        });
+        if (reqId !== reqIdRef.current) return;
+        
+        model = gltf.scene;
+        model.rotation.y = -Math.PI / 2; // Face forward initially
+        model.updateMatrixWorld(true);
+
+        // Find depth-aware bounding box (front part only)
+        let minZ = Infinity, maxZ = -Infinity;
+        model.traverse(ch => {
+          if (ch.isMesh) {
+            ch.geometry.computeBoundingBox();
+            const bbox = ch.geometry.boundingBox.clone().applyMatrix4(ch.matrixWorld);
+            minZ = Math.min(minZ, bbox.min.z);
+            maxZ = Math.max(maxZ, bbox.max.z);
+          }
+        });
+
+        const depth = maxZ - minZ;
+        const frontThreshold = maxZ - (depth * 0.1); 
+        const frontBox = new THREE.Box3();
+        model.traverse(ch => {
+          if (ch.isMesh) {
+            const pos = ch.geometry.attributes.position;
+            const mat = ch.matrixWorld;
+            for (let i = 0; i < pos.count; i++) {
+              const v = new THREE.Vector3().fromBufferAttribute(pos, i).applyMatrix4(mat);
+              if (v.z >= frontThreshold) frontBox.expandByPoint(v);
+            }
+          }
+        });
+
+        const center = frontBox.getCenter(new THREE.Vector3());
+        const size = frontBox.getSize(new THREE.Vector3());
+        const targetWidth = 1.9;
+        const scaleFac = targetWidth / Math.max(size.x, 0.1);
+
+        // Align bridge (front center) to origin INSIDE the pivot
+        model.scale.setScalar(scaleFac);
+        model.position.set(-center.x * scaleFac, -center.y * scaleFac, -maxZ * scaleFac);
+
+        // Temple Flexing Logic
+        model.traverse(ch => {
+          if (ch.isMesh) {
+            const name = ch.name.toLowerCase();
+            if (name.includes("temple") || name.includes("arm")) {
+              const weight = ch.position.x < 0 ? -1 : 1;
+              ch.rotation.y += 0.08 * weight; // Flex outward
+            }
+          }
+        });
+      } catch (err) {
+        console.error("GLB Load Error:", err);
+        return;
+      }
+    } else {
+      const c = f.colors[cIdx];
+      model = f.build(c, MATERIAL_PBR);
+    }
+
     if (old) {
       scene.remove(old);
       old.traverse((ch) => { if (ch.geometry) ch.geometry.dispose(); if (ch.material) ch.material.dispose(); });
     }
-    const f = AR_FRAMES[fIdx];
-    const c = f.colors[cIdx];
-    const glasses = f.build(c, MATERIAL_PBR);
-    glasses.visible = false;
+
+    // Pivot Strategy: Wrap in Group
+    const pivot = new THREE.Group();
+    pivot.add(model);
+    pivot.visible = false;
+
     /* store original opacities NOW before any render-loop modification */
-    glasses.traverse(child => {
+    pivot.traverse(child => {
       if (child.isMesh && child.material) {
-        child.material.userData._baseOpacity = child.material.opacity;
+        child.material.userData._baseOpacity = child.material.opacity !== undefined ? child.material.opacity : 1;
+        child.castShadow = true;
       }
     });
-    scene.add(glasses);
-    sceneRef.current.glasses = glasses;
-  }, []);
+
+    scene.add(pivot);
+    sceneRef.current.glasses = pivot;
+  }, [gltfLoader]);
 
   /* ── rebuild when frame/color changes ── */
   useEffect(() => {
@@ -587,7 +675,7 @@ export default function ARTryOn({ onBack }) {
 
         const landmarks = result.faceLandmarks[0];
         const faceMatrix = result.facialTransformationMatrixes?.[0] || null;
-        const pose = extractFacePose(landmarks, sceneRef.current.vWidth, sceneRef.current.vHeight, faceMatrix);
+        const pose = extractFacePose(landmarks, sceneRef.current.vWidth, sceneRef.current.vHeight, faceMatrix, faceWidth);
         const fb = filterBankRef.current;
         const t = now; /* timestamp for filters */
 
@@ -619,7 +707,7 @@ export default function ARTryOn({ onBack }) {
           targetQuat.z *= -1;
           targetQuat.w *= -1;
         }
-        glasses.quaternion.slerp(targetQuat, 0.55);
+        glasses.quaternion.slerp(targetQuat, 0.8);
 
       } else {
         noFaceFrames++;

@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState, useCallback, useMemo } from "react";
 import * as THREE from "three";
+import { GLTFLoader } from "three/examples/jsm/loaders/GLTFLoader";
 import ImpactPage from "./ImpactPage";
 import FitScanner from "./FitScanner";
 import ARTryOn from "./ARTryOn";
@@ -71,6 +72,13 @@ const LABEL_PARTS_W = ["right-lens","bridge","right-temple","right-hinge","right
    FRAMES
    ═══════════════════════════════════════════════════════════ */
 const FRAMES = [
+  { id:"custom", name:"Eza Custom Design", category:"Custom", basePrice:25, tagline:"Your unique vision", labelParts:[],
+    dimensions:{lens:"Custom",bridge:"Custom",temple:"Custom",height:"Custom"},
+    description:"Your hand-uploaded 3D design. Perfectly rendered, zero-compromise.",
+    url: "/models/glasses.glb",
+    colors:[
+      {name:"Original",frame:0xffffff,lens:0xffffff,accent:0xffffff,bg:["#0a0a0c","#141418","#0c0c10"],particle:"#fff"},
+    ], build:null },
   { id:"aviator", name:"Aviator Classic", category:"Sunglasses", basePrice:12, tagline:"Born to fly", labelParts:LABEL_PARTS,
     dimensions:{lens:"58mm",bridge:"14mm",temple:"140mm",height:"50mm"},
     description:"Teardrop silhouette with double bridge. Iconic, lightweight, everyday ready.",
@@ -191,7 +199,9 @@ export default function GlassesViewer() {
   const mountRef = useRef(null);
   const labelsRef = useRef(null);
   const sceneRef = useRef({});
+  const reqIdRef = useRef(0);
   const particleCanvasRef = useRef(null);
+  const gltfLoader = useMemo(() => new GLTFLoader(), []);
 
   /* configurator state */
   const [step, setStep] = useState(0);
@@ -200,6 +210,7 @@ export default function GlassesViewer() {
   const [lensIdx, setLensIdx] = useState(0);
   const [colorIdx, setColorIdx] = useState(0);
   const [sizeIdx, setSizeIdx] = useState(1);
+  const [calibratedFaceWidth, setCalibratedFaceWidth] = useState(null);
 
   /* UI state */
   const [menuOpen, setMenuOpen] = useState(false);
@@ -221,28 +232,117 @@ export default function GlassesViewer() {
   useParticles(particleCanvasRef, color.particle);
 
   /* ── build glasses ── */
-  const buildGlasses = useCallback((fIdx, cIdx, mIdx, animate = true) => {
+  const buildGlasses = useCallback(async (fIdx, cIdx, mIdx, animate = true) => {
     const { scene, state } = sceneRef.current; if (!scene) return;
     const oldG = sceneRef.current.glasses;
     const f = FRAMES[fIdx], c = f.colors[cIdx], mt = MATERIALS[mIdx];
-    const glasses = f.build(c, mt.pbr);
-    glasses.rotation.set(deg(8), deg(-25), 0);
-    if (animate) glasses.scale.setScalar(0.01);
-    scene.add(glasses);
-    sceneRef.current.glasses = glasses;
-    if (state) { state.targetRotX = deg(8); state.targetRotY = deg(-25); }
+    
+    // Async Safety: Track the requested index
+    const reqId = ++reqIdRef.current;
+
+    let model;
+    if (f.url) {
+      try {
+        const gltf = await new Promise((resolve, reject) => {
+          gltfLoader.load(f.url, resolve, undefined, reject);
+        });
+        // Abandon if another request has started
+        if (reqId !== reqIdRef.current) return;
+        
+        model = gltf.scene;
+        model.rotation.y = -Math.PI / 2; // Face forward initially
+        model.updateMatrixWorld(true);
+
+        // Find depth-aware bounding box (front part only)
+        let minZ = Infinity, maxZ = -Infinity;
+        model.traverse(ch => {
+          if (ch.isMesh) {
+            ch.geometry.computeBoundingBox();
+            const bbox = ch.geometry.boundingBox.clone().applyMatrix4(ch.matrixWorld);
+            minZ = Math.min(minZ, bbox.min.z);
+            maxZ = Math.max(maxZ, bbox.max.z);
+          }
+        });
+
+        const depth = maxZ - minZ;
+        const frontThreshold = maxZ - (depth * 0.1); 
+        const frontBox = new THREE.Box3();
+        model.traverse(ch => {
+          if (ch.isMesh) {
+            const pos = ch.geometry.attributes.position;
+            const mat = ch.matrixWorld;
+            for (let i = 0; i < pos.count; i++) {
+              const v = new THREE.Vector3().fromBufferAttribute(pos, i).applyMatrix4(mat);
+              if (v.z >= frontThreshold) frontBox.expandByPoint(v);
+            }
+          }
+        });
+
+        const center = frontBox.getCenter(new THREE.Vector3());
+        const size = frontBox.getSize(new THREE.Vector3());
+        const targetWidth = 1.9;
+        const scaleFac = targetWidth / Math.max(size.x, 0.1);
+
+        // Pivot Strategy: Scale-aware normalization
+        model.scale.setScalar(scaleFac);
+        model.position.set(-center.x * scaleFac, -center.y * scaleFac, -maxZ * scaleFac);
+
+        // Temple Flexing Logic
+        model.traverse(ch => {
+          if (ch.isMesh) {
+            const name = ch.name.toLowerCase();
+            if (name.includes("temple") || name.includes("arm")) {
+              const weight = ch.position.x < 0 ? -1 : 1;
+              ch.rotation.y += 0.08 * weight; // Flex outward
+            }
+          }
+        });
+      } catch (err) {
+        console.error("GLB Load Error:", err);
+        return;
+      }
+    } else {
+      model = f.build(c, mt.pbr);
+    }
+
+    // Wrap in pivot group
+    const pivot = new THREE.Group();
+    pivot.add(model);
+    pivot.rotation.set(deg(8), deg(0), 0);
+    if (animate) pivot.scale.setScalar(0.01);
+    
+    scene.add(pivot);
+    sceneRef.current.pivot = pivot;
+    sceneRef.current.glasses = model;
+
+    if (state) { state.targetRotX = deg(8); state.targetRotY = deg(0); }
     if (animate) {
       let t = 0;
       const swap = setInterval(() => {
         t += 0.04;
-        if (oldG) { const s = Math.max(0, 1 - t * 2.5); oldG.scale.setScalar(s); oldG.rotation.y += 0.04; if (s <= 0) { scene.remove(oldG); oldG.traverse(ch => { if (ch.geometry) ch.geometry.dispose(); if (ch.material) ch.material.dispose(); }); } }
-        const sIn = Math.min(1, Math.max(0, (t - 0.2) * 2)); glasses.scale.setScalar(1 - Math.pow(1 - sIn, 3));
-        if (t >= 1) { clearInterval(swap); setTransitioning(false); glasses.scale.setScalar(1); }
+        if (oldG) { 
+          const s = Math.max(0, 1 - t * 2.5); 
+          oldG.scale.setScalar(s); 
+          oldG.rotation.y += 0.04; 
+          if (s <= 0) { 
+            scene.remove(oldG); 
+            oldG.traverse(ch => { if (ch.geometry) ch.geometry.dispose(); if (ch.material) ch.material.dispose(); }); 
+          } 
+        }
+        const sIn = Math.min(1, Math.max(0, (t - 0.2) * 2)); 
+        const ease = 1 - Math.pow(1 - sIn, 3);
+        pivot.scale.setScalar(ease);
+        
+        if (t >= 1) { 
+          clearInterval(swap); 
+          setTransitioning(false); 
+          pivot.scale.setScalar(1);
+        }
       }, 16);
     } else {
       if (oldG) { scene.remove(oldG); oldG.traverse(ch => { if (ch.geometry) ch.geometry.dispose(); if (ch.material) ch.material.dispose(); }); }
     }
-  }, []);
+  }, [gltfLoader]);
 
   /* ── apply material/colour/lens changes in-place ── */
   const applyMaterials = useCallback(() => {
@@ -257,9 +357,9 @@ export default function GlassesViewer() {
         child.material.color.setHex(lt.tint.color);
         child.material.transmission = lt.tint.transmission;
         child.material.opacity = lt.tint.opacity;
-      } else if (child.material.metalness > 0.8) {
+      } else if (child.material && child.material.metalness > 0.8) {
         child.material.color.setHex(c.accent);
-      } else {
+      } else if (child.material) {
         child.material.color.setHex(c.frame);
         child.material.metalness = mt.pbr.metalness;
         child.material.roughness = mt.pbr.roughness;
@@ -333,7 +433,7 @@ export default function GlassesViewer() {
     scene.add(new THREE.DirectionalLight(0xffffff, 0.9).translateY(3).translateZ(-4));
     const ground = new THREE.Mesh(new THREE.PlaneGeometry(8, 8), new THREE.ShadowMaterial({ opacity: 0.12 }));
     ground.rotation.x = -Math.PI / 2; ground.position.y = -0.55; ground.receiveShadow = true; scene.add(ground);
-    const state = { isDragging: false, prevX: 0, prevY: 0, velX: 0, velY: 0, targetRotX: deg(8), targetRotY: deg(-25), mouseNX: 0, mouseNY: 0, introT: 0 };
+    const state = { isDragging: false, prevX: 0, prevY: 0, velX: 0, velY: 0, targetRotX: deg(8), targetRotY: deg(0), mouseNX: 0, mouseNY: 0, introT: 0 };
     sceneRef.current = { renderer, scene, camera, state, mount };
     buildGlasses(0, 0, 0, false);
     setTimeout(() => { setLoaded(true); setIntroPlayed(true); }, 100);
@@ -348,12 +448,12 @@ export default function GlassesViewer() {
     let raf;
     const animate = () => {
       raf = requestAnimationFrame(animate);
-      const glasses = sceneRef.current.glasses; if (!glasses) return;
+      const pivot = sceneRef.current.pivot; if (!pivot) return;
       if (state.introT < 1) { state.introT += 0.012; camera.position.z = lerp(4.5, 2.8, 1 - Math.pow(1 - Math.min(state.introT, 1), 4)); }
       if (!state.isDragging) { state.velX *= 0.92; state.velY *= 0.92; state.targetRotY += state.velX; state.targetRotX += state.velY; }
       state.targetRotY += 0.003;
-      glasses.rotation.y = lerp(glasses.rotation.y, state.targetRotY, 0.12);
-      glasses.rotation.x = lerp(glasses.rotation.x, state.targetRotX, 0.12);
+      pivot.rotation.y = lerp(pivot.rotation.y, state.targetRotY, 0.12);
+      pivot.rotation.x = lerp(pivot.rotation.x, state.targetRotX, 0.12);
       camera.position.x = lerp(camera.position.x, state.mouseNX * 0.1, 0.05);
       camera.position.y = lerp(camera.position.y, 0.15 - state.mouseNY * 0.06, 0.05);
       camera.lookAt(0, 0, 0); renderer.render(scene, camera);
@@ -491,7 +591,7 @@ export default function GlassesViewer() {
             <button className="gv-explode" onClick={() => setExploded(!exploded)} style={{ background: exploded ? "rgba(255,255,255,0.12)" : "rgba(255,255,255,0.04)", border: "1px solid rgba(255,255,255,0.1)", color: "#fff", padding: "7px 18px", borderRadius: 8, cursor: "pointer", fontSize: 10, letterSpacing: 1.5, textTransform: "uppercase", fontFamily: "'DM Sans', sans-serif" }}>
               {exploded ? "◇ Assemble" : "◈ Explode"}
             </button>
-            <button className="gv-explode" onClick={() => { setExploded(false); if (sceneRef.current.state) { sceneRef.current.state.targetRotX = deg(8); sceneRef.current.state.targetRotY = deg(-25); sceneRef.current.camera.position.z = 2.8; } }} style={{ background: "rgba(255,255,255,0.04)", border: "1px solid rgba(255,255,255,0.1)", color: "#fff", padding: "7px 18px", borderRadius: 8, cursor: "pointer", fontSize: 10, letterSpacing: 1.5, textTransform: "uppercase", fontFamily: "'DM Sans', sans-serif" }}>
+            <button className="gv-explode" onClick={() => { setExploded(false); if (sceneRef.current.state) { sceneRef.current.state.targetRotX = deg(8); sceneRef.current.state.targetRotY = deg(0); sceneRef.current.camera.position.z = 2.8; } }} style={{ background: "rgba(255,255,255,0.04)", border: "1px solid rgba(255,255,255,0.1)", color: "#fff", padding: "7px 18px", borderRadius: 8, cursor: "pointer", fontSize: 10, letterSpacing: 1.5, textTransform: "uppercase", fontFamily: "'DM Sans', sans-serif" }}>
               ↺ Reset
             </button>
           </div>
@@ -768,10 +868,11 @@ export default function GlassesViewer() {
       {/* AI FIT SCANNER */}
       {page === "scanner" && (
         <div style={{ position: "relative", zIndex: 2, flex: 1, width: "100%" }}>
-          <FitScanner onApplyFit={(fIdx, sIdx) => {
+          <FitScanner onApplyFit={({ fIdx, sIdx, faceWidth }) => {
             setFrameIdx(fIdx);
             setColorIdx(0);
             setSizeIdx(sIdx);
+            setCalibratedFaceWidth(faceWidth);
             setStep(5);
             setPage("configurator");
             window.scrollTo({ top: 0, behavior: "smooth" });
@@ -782,10 +883,13 @@ export default function GlassesViewer() {
       {/* AR TRY-ON */}
       {page === "ar" && (
         <div style={{ position: "relative", zIndex: 2, flex: 1, width: "100%" }}>
-          <ARTryOn onBack={() => {
-            setPage("configurator");
-            window.scrollTo({ top: 0, behavior: "smooth" });
-          }} />
+          <ARTryOn 
+            faceWidth={calibratedFaceWidth}
+            onBack={() => {
+              setPage("configurator");
+              window.scrollTo({ top: 0, behavior: "smooth" });
+            }} 
+          />
         </div>
       )}
 

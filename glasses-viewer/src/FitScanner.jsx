@@ -699,7 +699,11 @@ export default function FitScanner({ onApplyFit }) {
             </button>
             <button onClick={() => {
               stopCamera();
-              if (onApplyFit) onApplyFit(recommendation.frameIdx, recommendation.sizeIdx);
+              if (onApplyFit) onApplyFit({ 
+                frameIdx: recommendation.frameIdx, 
+                sizeIdx: recommendation.sizeIdx, 
+                faceWidth: measurements.faceWidth 
+              });
             }} style={{
               flex: 2, padding: "14px 0", borderRadius: 10, cursor: "pointer",
               background: "rgba(111,207,151,0.9)", border: "none", color: "#000",
