@@ -878,8 +878,8 @@ export default function ARTryOn({ onBack, faceWidth }) {
 
         {status === "live" && !faceDetected && (
           <div style={{
-            position: "absolute", top: "50%", left: "50%", transform: "translate(-50%, -50%)",
-            display: "flex", flexDirection: "column", alignItems: "center", gap: 10,
+            position: "absolute", inset: 0,
+            display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", gap: 10,
             animation: "arFadeIn 0.5s ease both", pointerEvents: "none",
           }}>
             <svg width="160" height="220" viewBox="0 0 160 220" style={{ opacity: 0.3 }}>
