@@ -234,7 +234,7 @@ export default function GlassesViewer() {
   /* ── build glasses ── */
   const buildGlasses = useCallback(async (fIdx, cIdx, mIdx, animate = true) => {
     const { scene, state } = sceneRef.current; if (!scene) return;
-    const oldG = sceneRef.current.glasses;
+    const oldPivot = sceneRef.current.pivot;
     const f = FRAMES[fIdx], c = f.colors[cIdx], mt = MATERIALS[mIdx];
     
     // Async Safety: Track the requested index
@@ -320,13 +320,13 @@ export default function GlassesViewer() {
       let t = 0;
       const swap = setInterval(() => {
         t += 0.04;
-        if (oldG) { 
+        if (oldPivot) { 
           const s = Math.max(0, 1 - t * 2.5); 
-          oldG.scale.setScalar(s); 
-          oldG.rotation.y += 0.04; 
+          oldPivot.scale.setScalar(s); 
+          oldPivot.rotation.y += 0.04; 
           if (s <= 0) { 
-            scene.remove(oldG); 
-            oldG.traverse(ch => { if (ch.geometry) ch.geometry.dispose(); if (ch.material) ch.material.dispose(); }); 
+            scene.remove(oldPivot); 
+            oldPivot.traverse(ch => { if (ch.geometry) ch.geometry.dispose(); if (ch.material) ch.material.dispose(); }); 
           } 
         }
         const sIn = Math.min(1, Math.max(0, (t - 0.2) * 2)); 
@@ -340,7 +340,7 @@ export default function GlassesViewer() {
         }
       }, 16);
     } else {
-      if (oldG) { scene.remove(oldG); oldG.traverse(ch => { if (ch.geometry) ch.geometry.dispose(); if (ch.material) ch.material.dispose(); }); }
+      if (oldPivot) { scene.remove(oldPivot); oldPivot.traverse(ch => { if (ch.geometry) ch.geometry.dispose(); if (ch.material) ch.material.dispose(); }); }
     }
   }, [gltfLoader]);
 
