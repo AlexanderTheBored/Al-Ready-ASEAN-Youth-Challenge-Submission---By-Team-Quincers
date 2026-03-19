@@ -33,13 +33,13 @@ const LANDMARK = {
   rightIris: [473, 474, 475, 476, 477],
 };
 
-function dist(a, b) {
-  return Math.sqrt((a.x - b.x) ** 2 + (a.y - b.y) ** 2 + ((a.z || 0) - (b.z || 0)) ** 2);
+function dist(a, b, aspect = 1.333) {
+  return Math.sqrt((a.x - b.x) ** 2 + ((a.y - b.y) / aspect) ** 2 + ((a.z || 0) - (b.z || 0)) ** 2);
 }
 
 /* convert normalized landmark distance to approximate mm using Iris or Manual IPD as reference */
 /* average adult iris diameter is ~11.7mm */
-function computeMeasurements(landmarks, options = {}) {
+function computeMeasurements(landmarks, options = {}, aspect = 1) {
   const lm = (idx) => landmarks[idx];
   const { manualIPD = null } = options;
 
@@ -57,28 +57,26 @@ function computeMeasurements(landmarks, options = {}) {
   /* Iris-based calibration (Natural Ruler) */
   const lIris = LANDMARK.leftIris;
   const rIris = LANDMARK.rightIris;
-  const lIrisDiam = dist(lm(lIris[1]), lm(lIris[2])); /* horizontal */
-  const rIrisDiam = dist(lm(rIris[1]), lm(rIris[2])); /* horizontal */
+  const lIrisDiam = dist(lm(lIris[1]), lm(lIris[2]), aspect);
+  const rIrisDiam = dist(lm(rIris[1]), lm(rIris[2]), aspect);
   const avgIrisDiamUnits = (lIrisDiam + rIrisDiam) / 2;
 
   /* Calibration logic: Manual IPD > Iris Auto > Statistical fallback */
   let mmPerUnit;
   if (manualIPD && manualIPD > 0) {
-    /* distance between pupil centers */
-    const ipdUnits = dist(lm(lIris[0]), lm(rIris[0]));
+    const ipdUnits = dist(lm(lIris[0]), lm(rIris[0]), aspect);
     mmPerUnit = manualIPD / ipdUnits;
   } else if (avgIrisDiamUnits > 0.001) {
     mmPerUnit = 11.7 / avgIrisDiamUnits;
   } else {
-    /* fallback to statistical average eye distance if iris not clear */
-    const eyeOuterDist = dist(leftEyeOuter, rightEyeOuter);
+    const eyeOuterDist = dist(leftEyeOuter, rightEyeOuter, aspect);
     mmPerUnit = 85 / eyeOuterDist;
   }
 
-  const faceWidth = dist(leftTemple, rightTemple) * mmPerUnit;
-  const bridgeWidth = dist(leftEyeInner, rightEyeInner) * mmPerUnit;
-  const faceHeight = dist(foreheadTop, chinBottom) * mmPerUnit;
-  const cheekWidth = dist(leftCheek, rightCheek) * mmPerUnit;
+  const faceWidth = dist(leftTemple, rightTemple, aspect) * mmPerUnit;
+  const bridgeWidth = dist(leftEyeInner, rightEyeInner, aspect) * mmPerUnit;
+  const faceHeight = dist(foreheadTop, chinBottom, aspect) * mmPerUnit;
+  const cheekWidth = dist(leftCheek, rightCheek, aspect) * mmPerUnit;
 
   /* face shape classification */
   const ratio = faceWidth / faceHeight;
@@ -198,6 +196,7 @@ export default function FitScanner({ onApplyFit }) {
   const [cameraError, setCameraError] = useState(null);
   const [confirmed, setConfirmed] = useState(false);
   const [countdownValue, setCountdownValue] = useState(3);
+  const [aspectRatio, setAspectRatio] = useState(4/3);
   const [manualIPD, setManualIPD] = useState("");
   const [showSettings, setShowSettings] = useState(false);
 
@@ -222,13 +221,14 @@ export default function FitScanner({ onApplyFit }) {
   /* ── initialize MediaPipe ── */
   const initFaceLandmarker = useCallback(async () => {
     try {
+      const isMobile = window.matchMedia("(max-width: 840px)").matches || /Mobi|Android/i.test(navigator.userAgent);
       const vision = await FilesetResolver.forVisionTasks(
         "https://cdn.jsdelivr.net/npm/@mediapipe/tasks-vision@latest/wasm"
       );
       const fl = await FaceLandmarker.createFromOptions(vision, {
         baseOptions: {
           modelAssetPath: "https://storage.googleapis.com/mediapipe-models/face_landmarker/face_landmarker/float16/1/face_landmarker.task",
-          delegate: "GPU",
+          delegate: isMobile ? "CPU" : "GPU",
         },
         runningMode: "VIDEO",
         numFaces: 1,
@@ -240,26 +240,70 @@ export default function FitScanner({ onApplyFit }) {
     } catch (err) {
       console.error("MediaPipe init error:", err);
       setStatus("error");
-      setCameraError("Failed to load AI model. Check your internet connection.");
+      setCameraError("Failed to load AI model. Check your internet connection or browser compatibility.");
       return false;
     }
   }, []);
 
   /* ── start camera ── */
   const startCamera = useCallback(async () => {
+    if (typeof navigator === "undefined" || !navigator.mediaDevices) {
+      setCameraError("Camera API not supported in this browser.");
+      setStatus("error");
+      return false;
+    }
+
     try {
-      const stream = await navigator.mediaDevices.getUserMedia({
-        video: { facingMode: "user", width: { ideal: 640 }, height: { ideal: 480 } },
-      });
+      const isMobile = /Mobi|Android/i.test(navigator.userAgent) || window.innerWidth <= 840;
+      const constraints = {
+        video: isMobile 
+          ? { facingMode: "user", width: { ideal: 640 }, height: { ideal: 480 } }
+          : { facingMode: "user", width: { ideal: 1280 }, height: { ideal: 960 } }
+      };
+
+      let stream;
+      try {
+        stream = await navigator.mediaDevices.getUserMedia(constraints);
+      } catch (e) {
+        console.warn("FitScanner: Preferred constraints failed, trying default...", e.name);
+        try {
+          stream = await navigator.mediaDevices.getUserMedia({ video: true });
+        } catch (e2) {
+          throw e2;
+        }
+      }
+
       streamRef.current = stream;
       if (videoRef.current) {
         videoRef.current.srcObject = stream;
-        await videoRef.current.play();
+        try {
+          // Wait for metadata to get aspect ratio
+          await new Promise((res) => {
+            videoRef.current.onloadedmetadata = () => {
+              setAspectRatio(videoRef.current.videoWidth / videoRef.current.videoHeight);
+              res();
+            };
+            if (videoRef.current.videoWidth > 0) res(); // Backup if already loaded
+          });
+          await videoRef.current.play();
+        } catch (playErr) {
+          console.error("FitScanner: Play error:", playErr);
+        }
       }
       return true;
     } catch (err) {
-      console.error("Camera error:", err);
-      setCameraError("Camera access denied. Please allow camera permissions and try again.");
+      console.error("FitScanner: Camera ultimately failed:", err);
+      let msg = "Camera access denied. Please allow permissions and refresh.";
+      if (err.name === "NotAllowedError" || err.name === "PermissionDeniedError") {
+        msg = "Camera access denied. Click the 'lock' icon in your address bar to reset permissions.";
+      } else if (err.name === "NotFoundError" || err.name === "DevicesNotFoundError") {
+        msg = "No camera found. Please connect a webcam.";
+      } else if (err.name === "NotReadableError" || err.name === "TrackStartError") {
+        msg = "Camera is being used by another application.";
+      } else if (err.name === "OverconstrainedError") {
+        msg = "Your camera doesn't support the requested resolution.";
+      }
+      setCameraError(msg);
       setStatus("error");
       return false;
     }
@@ -284,14 +328,15 @@ export default function FitScanner({ onApplyFit }) {
 
     const ctx = canvas.getContext("2d");
     const samples = [];
-    let lastTime = -1;
+    let lastTimeVideo = -1;
 
     const detect = () => {
       animFrameRef.current = requestAnimationFrame(detect);
       if (video.readyState < 2) return;
+      const videoTime = video.currentTime;
+      if (videoTime === lastTimeVideo) return;
+      lastTimeVideo = videoTime;
       const now = performance.now();
-      if (now === lastTime) return;
-      lastTime = now;
 
       canvas.width = video.videoWidth;
       canvas.height = video.videoHeight;
@@ -312,7 +357,6 @@ export default function FitScanner({ onApplyFit }) {
         ctx.scale(-1, 1);
         ctx.translate(-canvas.width, 0);
 
-        /* draw key measurement lines */
         const drawLine = (idx1, idx2, color) => {
           const a = landmarks[idx1];
           const b = landmarks[idx2];
@@ -322,13 +366,6 @@ export default function FitScanner({ onApplyFit }) {
           ctx.strokeStyle = color;
           ctx.lineWidth = 2;
           ctx.stroke();
-          /* dots at endpoints */
-          [a, b].forEach((p) => {
-            ctx.beginPath();
-            ctx.arc(p.x * canvas.width, p.y * canvas.height, 4, 0, Math.PI * 2);
-            ctx.fillStyle = color;
-            ctx.fill();
-          });
         };
 
         /* face width */
@@ -349,8 +386,8 @@ export default function FitScanner({ onApplyFit }) {
 
         ctx.restore();
 
-        /* accumulate stable samples */
-        const m = computeMeasurements(landmarks, { manualIPD: parseFloat(manualIPD) });
+        const aspect = video.videoWidth / video.videoHeight;
+        const m = computeMeasurements(landmarks, { manualIPD: parseFloat(manualIPD) }, aspect);
         samples.push(m);
         setScanProgress(Math.min(samples.length / SAMPLES_NEEDED, 1));
 
@@ -521,7 +558,11 @@ export default function FitScanner({ onApplyFit }) {
       </section>
 
       {/* CAMERA VIEWPORT */}
-      <div style={{ position: "relative", width: "100%", maxWidth: 560, margin: "0 auto 32px", aspectRatio: "4/3", borderRadius: 20, overflow: "hidden", background: "#0a0a0c", border: "1px solid rgba(255,255,255,0.06)" }}>
+      <div style={{ 
+        position: "relative", width: "100%", maxWidth: 560, margin: "0 auto 32px", 
+        aspectRatio: aspectRatio, borderRadius: 20, overflow: "hidden", 
+        background: "#0a0a0c", border: "1px solid rgba(255,255,255,0.06)" 
+      }}>
 
         {/* video + canvas (hidden until camera is active) */}
         <video ref={videoRef} playsInline muted style={{ display: "none" }} />

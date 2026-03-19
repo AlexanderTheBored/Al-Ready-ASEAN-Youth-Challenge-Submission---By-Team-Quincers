@@ -93,9 +93,9 @@ const FILTER_CONFIG = {
   px:    { freq: 30, minCutoff: 1.5,  beta: 0.5,  dCutoff: 1.0 },
   py:    { freq: 30, minCutoff: 1.5,  beta: 0.5,  dCutoff: 1.0 },
   scale: { freq: 30, minCutoff: 0.3,  beta: 0.01, dCutoff: 1.0 },
-  roll:  { freq: 30, minCutoff: 1.2,  beta: 0.4,  dCutoff: 1.0 },
-  yaw:   { freq: 30, minCutoff: 1.0,  beta: 0.3,  dCutoff: 1.0 },
-  pitch: { freq: 30, minCutoff: 0.8,  beta: 0.2,  dCutoff: 1.0 },
+  roll:  { freq: 30, minCutoff: 0.8,  beta: 0.2,  dCutoff: 1.0 },
+  yaw:   { freq: 30, minCutoff: 0.6,  beta: 0.15, dCutoff: 1.0 },
+  pitch: { freq: 30, minCutoff: 0.6,  beta: 0.1,  dCutoff: 1.0 },
   depth: { freq: 30, minCutoff: 0.2,  beta: 0.01, dCutoff: 1.0 },
   _default: { freq: 30, minCutoff: 1.0, beta: 0.1, dCutoff: 1.0 },
 };
@@ -115,8 +115,8 @@ const LM = {
   rightIris: [473, 474, 475, 476, 477],
 };
 
-function dist3D(a, b) {
-  return Math.sqrt((a.x - b.x) ** 2 + (a.y - b.y) ** 2 + ((a.z || 0) - (b.z || 0)) ** 2);
+function dist3D(a, b, aspect = 1.333) {
+  return Math.sqrt((a.x - b.x) ** 2 + ((a.y - b.y) / aspect) ** 2 + ((a.z || 0) - (b.z || 0)) ** 2);
 }
 
 function avgLandmark(...lms) {
@@ -138,54 +138,63 @@ function extractFacePose(landmarks, vWidth, vHeight, facialMatrix, calibratedFac
   const leftTemple = landmarks[LM.leftTemple];
   const rightTemple = landmarks[LM.rightTemple];
 
-  const eyeOuterW = dist3D(leftEyeO, rightEyeO);
-  
-  const lIris = landmarks[LM.leftIris[0]];
-  const rIris = landmarks[LM.rightIris[0]];
-  const lIrisH = dist3D(landmarks[LM.leftIris[1]], landmarks[LM.leftIris[2]]);
-  const rIrisH = dist3D(landmarks[LM.rightIris[1]], landmarks[LM.rightIris[2]]);
+  const aspect = vWidth / vHeight;
+  const normDist = (p1, p2) => Math.sqrt((p1.x - p2.x) ** 2 + ((p1.y - p2.y) / aspect) ** 2);
+
+  const eyeOuterW = normDist(leftEyeO, rightEyeO);
+  const lIrisH = normDist(landmarks[LM.leftIris[1]], landmarks[LM.leftIris[2]]);
+  const rIrisH = normDist(landmarks[LM.rightIris[1]], landmarks[LM.rightIris[2]]);
   const avgIrisH = (lIrisH + rIrisH) / 2;
 
   const modelWidth = 1.92;
   let scale;
 
-  if (avgIrisH > 0.005) {
-    const mmPerUnit = 11.7 / avgIrisH;
-    scale = (mmPerUnit * 13.5) / modelWidth;
-  } else if (calibratedFaceWidth) {
-    scale = (calibratedFaceWidth * (eyeOuterW / 0.085)) / modelWidth * 1.2;
+  // Use statistical face width as primary logic for better stability
+  const templeW = normDist(leftTemple, rightTemple);
+  const faceW = (templeW * 0.4 + eyeOuterW * 0.6) * vWidth;
+  const standardScale = (faceW / modelWidth) * 1.6;
+
+  if (calibratedFaceWidth) {
+    // calibrateFaceWidth is usually ~140-150mm. modelWidth (1.92) is about 192mm.
+    const baseScale = (calibratedFaceWidth / 192);
+    scale = baseScale * (eyeOuterW / 0.085) * 1.5;
+  } else if (avgIrisH > 0.015) {
+    // Fine-tune with iris if very clear
+    const unitsPerMm = avgIrisH / 11.7;
+    const targetWInUnits = (145 * unitsPerMm) * vWidth;
+    scale = (targetWInUnits / modelWidth) * 1.8;
   } else {
-    const templeW = dist3D(leftTemple, rightTemple);
-    const faceW = (templeW * 0.4 + eyeOuterW * 0.6) * vWidth;
-    scale = (faceW / modelWidth) * 1.6;
+    scale = standardScale;
   }
 
   let roll = 0, yaw = 0, pitch = 0;
 
-  if (facialMatrix && facialMatrix.data) {
+  if (facialMatrix && facialMatrix.data && facialMatrix.data.length >= 12) {
     const d = facialMatrix.data;
-    const R00 = d[0], R01 = d[4], R02 = d[8];
-    const R10 = d[1], R11 = d[5], R12 = d[9];
-    const R20 = d[2], R21 = d[6], R22 = d[10];
+    // MediaPipe matrix is Column-Major. Row-Major indices:
+    // Row 0: 0, 4, 8. Row 1: 1, 5, 9. Row 2: 2, 6, 10.
+    const R00 = d[0] || 1, R01 = d[4] || 0, R02 = d[8]  || 0;
+    const R10 = d[1] || 0, R11 = d[5] || 1, R12 = d[9]  || 0;
+    const R20 = d[2] || 0, R21 = d[6] || 0, R22 = d[10] || 1;
 
-    const sy = Math.sqrt(R00 * R00 + R10 * R10);
-    const singular = sy < 1e-6;
+    // Standard YXZ decomposition (Yaw, then Pitch, then Roll)
+    yaw = Math.atan2(R02, R22);
+    pitch = Math.asin(Math.max(-1, Math.min(1, -R12)));
+    roll = Math.atan2(R10, R11);
 
-    if (!singular) {
-      pitch = Math.atan2(R21, R22);
-      yaw   = Math.atan2(-R20, sy);
-      roll  = Math.atan2(R10, R00);
-    } else {
-      pitch = Math.atan2(-R12, R11);
-      yaw   = Math.atan2(-R20, sy);
-      roll  = 0;
-    }
+    // If any are NaN (should not happen with guards, but for safety)
+    if (isNaN(yaw)) yaw = 0;
+    if (isNaN(pitch)) pitch = 0;
+    if (isNaN(roll)) roll = 0;
 
+    // Mirroring for scaleX(-1) video: Flip X-related signs
     yaw = -yaw;
     roll = -roll;
-    pitch = Math.max(-1.2, Math.min(1.2, pitch));
-    yaw   = Math.max(-1.2, Math.min(1.2, yaw));
-    roll  = Math.max(-0.8, Math.min(0.8, roll));
+    
+    // Bounds for stability
+    pitch = Math.max(-0.8, Math.min(0.8, pitch));
+    yaw   = Math.max(-1.0, Math.min(1.0, yaw));
+    roll  = Math.max(-0.6, Math.min(0.6, roll));
   } else {
     roll = -Math.atan2(rightEyeO.y - leftEyeO.y, rightEyeO.x - leftEyeO.x);
     const leftDist = Math.abs(bridge.x - leftTemple.x);
@@ -193,6 +202,7 @@ function extractFacePose(landmarks, vWidth, vHeight, facialMatrix, calibratedFac
     const totalDist = leftDist + rightDist;
     const yawNorm = totalDist > 0.001 ? ((leftDist / totalDist) - 0.5) * 2.0 : 0;
     yaw = Math.asin(Math.max(-0.95, Math.min(0.95, yawNorm * 0.9)));
+    // roll remains 0 or calculated via landmarks
     pitch = 0;
   }
 
@@ -200,15 +210,14 @@ function extractFacePose(landmarks, vWidth, vHeight, facialMatrix, calibratedFac
   const anchor = avgLandmark(bridge, bridgeTop, innerMid);
 
   const pxBase = (0.5 - bridge.x) * vWidth;
-  const templeW = dist3D(leftTemple, rightTemple);
-  const faceW = (templeW * 0.4 + eyeOuterW * 0.6) * vWidth;
-  const noseProtrusionScale = faceW * 0.12; 
+  // Reduce protrusion force slightly for mobile stability
+  const noseProtrusionScale = faceW * 0.1; 
   const yawCorr = Math.sin(yaw) * noseProtrusionScale;
-  const px = pxBase + (yawCorr * vWidth);
-  const py = -(anchor.y - 0.5) * vHeight - vHeight * 0.02;
+  const px = pxBase + (yawCorr * vWidth) - (vWidth * 0.005);
+  const py = -(anchor.y - 0.5) * vHeight - vHeight * 0.03;
 
-  const depthScale = (0.085 / eyeOuterW) * 0.15;
-  const depthFromZ = (anchor.z * 0.2) + (depthScale * -1);
+  const depthScale = (0.085 / eyeOuterW) * 1.15;
+  const depthFromZ = (anchor.z * 0.5) + (depthScale * -1.02);
 
   return { px, py, scale, roll, yaw, pitch, depthOffset: depthFromZ };
 }
@@ -382,6 +391,7 @@ export default function ARTryOn({ onBack, faceWidth }) {
   const [faceDetected, setFaceDetected] = useState(false);
   const [capturedImage, setCapturedImage] = useState(null);
   const [cameraError, setCameraError] = useState(null);
+  const [aspectRatio, setAspectRatio] = useState(4/3);
 
   const frame = AR_FRAMES[frameIdx];
   const color = frame.colors[colorIdx];
@@ -413,8 +423,8 @@ export default function ARTryOn({ onBack, faceWidth }) {
 
   /* ── build / rebuild glasses model ── */
   const buildGlasses = useCallback(async (fIdx, cIdx) => {
-    const { scene, glasses: old } = sceneRef.current;
-    if (!scene) return;
+    const { scene, glassesParent } = sceneRef.current;
+    if (!scene || !glassesParent) return;
 
     const f = AR_FRAMES[fIdx];
     const reqId = ++reqIdRef.current;
@@ -461,7 +471,8 @@ export default function ARTryOn({ onBack, faceWidth }) {
         const scaleFac = targetWidth / Math.max(size.x, 0.1);
 
         model.scale.setScalar(scaleFac);
-        model.position.set(-center.x * scaleFac, -center.y * scaleFac, -maxZ * scaleFac);
+        // Shift model forward 0.05 relative to pivot (which will be behind bridge)
+        model.position.set(-center.x * scaleFac, -center.y * scaleFac, (-maxZ * scaleFac) + 0.05);
 
         model.traverse(ch => {
           if (ch.isMesh) {
@@ -483,11 +494,23 @@ export default function ARTryOn({ onBack, faceWidth }) {
     } else {
       const c = f.colors[cIdx];
       model = f.build(c, MATERIAL_PBR);
+      model.position.z += 0.05; // Shift procedural model too
     }
 
-    if (old) {
-      scene.remove(old);
-      old.traverse((ch) => { if (ch.geometry) ch.geometry.dispose(); if (ch.material) ch.material.dispose(); });
+    // Final request ID check before scene modification
+    if (reqId !== reqIdRef.current) return;
+
+    // ELIMINATE GHOSTS: Clear the parent group completely
+    while (glassesParent.children.length > 0) {
+      const ch = glassesParent.children[0];
+      glassesParent.remove(ch);
+      ch.traverse((c) => {
+        if (c.geometry) c.geometry.dispose();
+        if (c.material) {
+          const ms = Array.isArray(c.material) ? c.material : [c.material];
+          ms.forEach(m => m.dispose());
+        }
+      });
     }
 
     const pivot = new THREE.Group();
@@ -501,7 +524,7 @@ export default function ARTryOn({ onBack, faceWidth }) {
       }
     });
 
-    scene.add(pivot);
+    glassesParent.add(pivot);
     sceneRef.current.glasses = pivot;
   }, [gltfLoader]);
 
@@ -562,13 +585,14 @@ export default function ARTryOn({ onBack, faceWidth }) {
   /* ── initialize MediaPipe ── */
   const initFaceLandmarker = useCallback(async () => {
     try {
+      const isMobile = window.matchMedia("(max-width: 840px)").matches || /Mobi|Android/i.test(navigator.userAgent);
       const vision = await FilesetResolver.forVisionTasks(
         "https://cdn.jsdelivr.net/npm/@mediapipe/tasks-vision@latest/wasm"
       );
       const fl = await FaceLandmarker.createFromOptions(vision, {
         baseOptions: {
           modelAssetPath: "https://storage.googleapis.com/mediapipe-models/face_landmarker/face_landmarker/float16/1/face_landmarker.task",
-          delegate: "GPU",
+          delegate: isMobile ? "CPU" : "GPU",
         },
         runningMode: "VIDEO",
         numFaces: 1,
@@ -579,7 +603,7 @@ export default function ARTryOn({ onBack, faceWidth }) {
       return true;
     } catch (err) {
       console.error("MediaPipe init error:", err);
-      setCameraError("Failed to load AI model. Check your internet connection.");
+      setCameraError("Failed to load AI model. Check your internet connection or browser compatibility.");
       setStatus("error");
       return false;
     }
@@ -587,19 +611,61 @@ export default function ARTryOn({ onBack, faceWidth }) {
 
   /* ── start camera ── */
   const startCamera = useCallback(async () => {
+    if (typeof navigator === "undefined" || !navigator.mediaDevices) {
+      setCameraError("Camera API not supported in this browser.");
+      setStatus("error");
+      return false;
+    }
+    if (!window.isSecureContext) {
+      setCameraError("AR requires a secure connection (HTTPS).");
+      setStatus("error");
+      return false;
+    }
+
     try {
-      const stream = await navigator.mediaDevices.getUserMedia({
-        video: { facingMode: "user", width: { ideal: 1280 }, height: { ideal: 960 } },
-      });
+      const isMobile = /Mobi|Android/i.test(navigator.userAgent) || window.innerWidth <= 840;
+      const constraints = {
+        video: isMobile 
+          ? { facingMode: "user", width: { ideal: 640 }, height: { ideal: 480 } }
+          : { facingMode: "user", width: { ideal: 1280 }, height: { ideal: 960 } }
+      };
+
+      let stream;
+      try {
+        stream = await navigator.mediaDevices.getUserMedia(constraints);
+      } catch (e) {
+        console.warn("Camera: Preferred constraints failed, trying default...", e.name);
+        try {
+          stream = await navigator.mediaDevices.getUserMedia({ video: true });
+        } catch (e2) {
+          throw e2; // Re-throw the ultimate failure
+        }
+      }
+
       streamRef.current = stream;
       if (videoRef.current) {
         videoRef.current.srcObject = stream;
-        await videoRef.current.play();
+        try {
+          await videoRef.current.play();
+        } catch (playErr) {
+          console.error("Camera: Play error (Autoplay policy?):", playErr);
+          // Don't fail here, just log it, as some browsers might need a user action
+        }
       }
       return true;
     } catch (err) {
-      console.error("Camera error:", err);
-      setCameraError("Camera access denied. Please allow camera permissions.");
+      console.error("Camera access ultimately failed:", err);
+      let msg = "Camera access denied. Please allow permissions and refresh.";
+      if (err.name === "NotAllowedError" || err.name === "PermissionDeniedError") {
+        msg = "Camera access denied. Click the 'lock' icon in your address bar to reset permissions.";
+      } else if (err.name === "NotFoundError" || err.name === "DevicesNotFoundError") {
+        msg = "No camera found. Please connect a webcam.";
+      } else if (err.name === "NotReadableError" || err.name === "TrackStartError") {
+        msg = "Camera is being used by another application.";
+      } else if (err.name === "OverconstrainedError") {
+        msg = "Your camera doesn't support the requested resolution.";
+      }
+      setCameraError(msg);
       setStatus("error");
       return false;
     }
@@ -612,10 +678,10 @@ export default function ARTryOn({ onBack, faceWidth }) {
       streamRef.current.getTracks().forEach((t) => t.stop());
       streamRef.current = null;
     }
-    const { renderer, scene, glasses } = sceneRef.current;
-    if (glasses) {
-      scene?.remove(glasses);
-      glasses.traverse((ch) => { if (ch.geometry) ch.geometry.dispose(); if (ch.material) ch.material.dispose(); });
+    const { renderer, scene, glassesParent } = sceneRef.current;
+    if (glassesParent) {
+      scene?.remove(glassesParent);
+      glassesParent.traverse((ch) => { if (ch.geometry) ch.geometry.dispose(); if (ch.material) ch.material.dispose(); });
     }
     if (renderer) renderer.dispose();
     if (threeContainerRef.current && renderer?.domElement) {
@@ -629,16 +695,21 @@ export default function ARTryOn({ onBack, faceWidth }) {
     const container = threeContainerRef.current;
     if (!container) return;
 
-    const renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true });
+    const isMobile = window.matchMedia("(max-width: 840px)").matches || /Mobi|Android/i.test(navigator.userAgent);
+    const renderer = new THREE.WebGLRenderer({ antialias: !isMobile, alpha: true, powerPreference: "high-performance" });
     renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
     renderer.setSize(width, height);
     renderer.toneMapping = THREE.ACESFilmicToneMapping;
     renderer.toneMappingExposure = 1.4;
+    // KILL GHOSTS: Ensure container is empty before adding a new canvas
+    while (container.firstChild) {
+      container.removeChild(container.firstChild);
+    }
     container.appendChild(renderer.domElement);
     renderer.domElement.style.cssText = "position:absolute;top:0;left:0;width:100%;height:100%;pointer-events:none;";
 
-    const fov = 50;
-    const aspect = width / height;
+    const fov = isMobile ? 55 : 75;
+    const aspect = (width || 640) / (height || 480);
     const camera = new THREE.PerspectiveCamera(fov, aspect, 0.01, 100);
     camera.position.set(0, 0, 0);
     camera.lookAt(0, 0, -1);
@@ -660,7 +731,10 @@ export default function ARTryOn({ onBack, faceWidth }) {
     const vHeight = 2 * zDist * Math.tan((fov * Math.PI / 180) / 2);
     const vWidth = vHeight * aspect;
 
-    sceneRef.current = { renderer, scene, camera, fov, zDist, vWidth, vHeight };
+    const glassesParent = new THREE.Group();
+    scene.add(glassesParent);
+
+    sceneRef.current = { renderer, scene, camera, glassesParent, fov, zDist, vWidth, vHeight };
   }, []);
 
   /* ── MAIN LOOP ── */
@@ -671,18 +745,19 @@ export default function ARTryOn({ onBack, faceWidth }) {
     if (!fl || !video || !vCanvas) return;
 
     const vCtx = vCanvas.getContext("2d");
-    let lastTime = -1;
     let noFaceFrames = 0;
 
     const targetQuat = new THREE.Quaternion();
     const euler = new THREE.Euler(0, 0, 0, "ZYX");
 
-    const loop = (now) => {
+    const loop = () => {
       rafRef.current = requestAnimationFrame(loop);
       if (video.readyState < 2) return;
 
-      if (now === lastTime) return;
-      lastTime = now;
+      if (!sceneRef.current || !sceneRef.current.vWidth || !sceneRef.current.vHeight) {
+        // If scene dimensions are not yet set, wait for the next frame
+        return;
+      }
 
       const { renderer, scene, camera, zDist, glasses } = sceneRef.current;
       if (!renderer || !glasses) return;
@@ -704,6 +779,15 @@ export default function ARTryOn({ onBack, faceWidth }) {
       vCtx.scale(-1, 1);
       vCtx.drawImage(video, -vw, 0, vw, vh);
       vCtx.restore();
+
+      const now = performance.now();
+      const videoTime = video.currentTime;
+      
+      // Save energy/CPU: skip if video frame hasn't actually advanced
+      if (sceneRef.current._lastVideoTime === videoTime) {
+        return;
+      }
+      sceneRef.current._lastVideoTime = videoTime;
 
       const result = fl.detectForVideo(video, now);
       const hasFace = result.faceLandmarks && result.faceLandmarks.length > 0;
@@ -727,7 +811,8 @@ export default function ARTryOn({ onBack, faceWidth }) {
         const fpitch = fb.filter("pitch", pose.pitch,       t);
         const fdepth = fb.filter("depth", pose.depthOffset, t);
 
-        glasses.position.set(fpx, fpy, -zDist + fdepth);
+        // Place pivot 0.05 deep into the head from the bridge anchor
+        glasses.position.set(fpx, fpy, -zDist + fdepth - 0.05);
         glasses.scale.setScalar(fscale);
 
         euler.set(fpitch, fyaw, froll);
@@ -736,7 +821,7 @@ export default function ARTryOn({ onBack, faceWidth }) {
         if (glasses.quaternion.dot(targetQuat) < 0) {
           targetQuat.x *= -1; targetQuat.y *= -1; targetQuat.z *= -1; targetQuat.w *= -1;
         }
-        glasses.quaternion.slerp(targetQuat, 0.8);
+        glasses.quaternion.slerp(targetQuat, 0.85);
 
       } else {
         noFaceFrames++;
@@ -778,36 +863,25 @@ export default function ARTryOn({ onBack, faceWidth }) {
     setCapturedImage(null);
     setCameraError(null);
 
-    const modelOk = faceLandmarkerRef.current || (await initFaceLandmarker());
-    if (!modelOk) return;
-
-    const camOk = await startCamera();
-    if (!camOk) return;
-
-    await new Promise((res) => {
-      const check = () => {
-        if (videoRef.current && videoRef.current.videoWidth > 0) return res();
-        requestAnimationFrame(check);
-      };
-      check();
-    });
+    const okModel = await initFaceLandmarker();
+    const okCamera = await startCamera();
+    if (!okModel || !okCamera || !videoRef.current) return;
 
     const container = threeContainerRef.current;
-    const displayW = container?.clientWidth || videoRef.current.videoWidth;
-    const displayH = container?.clientHeight || videoRef.current.videoHeight;
+    const displayW = container?.clientWidth || videoRef.current.videoWidth || 640;
+    const displayH = container?.clientHeight || videoRef.current.videoHeight || 480;
 
     initThreeJS(displayW, displayH);
     buildGlasses(frameIdx, colorIdx);     
-    prevFrameIdxRef.current = frameIdx;     
+    prevFrameIdxRef.current = frameIdx;
     startLoop();
     setStatus("live");
-  }, [initFaceLandmarker, startCamera, initThreeJS, startLoop]);
+  }, [initFaceLandmarker, startCamera, initThreeJS, buildGlasses, startLoop, frameIdx, colorIdx]);
 
   useEffect(() => {
     handleStart();
     return cleanup;
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+  }, [handleStart, cleanup]);
 
   /* ── capture photo ── */
   const handleCapture = useCallback(() => {
@@ -884,7 +958,7 @@ export default function ARTryOn({ onBack, faceWidth }) {
 
       <div style={{
         position: "relative", width: "100%", maxWidth: 640, margin: "0 auto",
-        aspectRatio: "4/3", borderRadius: 20, overflow: "hidden",
+        aspectRatio: aspectRatio, borderRadius: 20, overflow: "hidden",
         background: "#0a0a0c", border: "1px solid rgba(255,255,255,0.06)",
         boxShadow: "0 8px 60px rgba(0,0,0,0.4)",
       }}>
