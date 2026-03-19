@@ -140,7 +140,6 @@ function extractFacePose(landmarks, vWidth, vHeight, facialMatrix, calibratedFac
 
   const eyeOuterW = dist3D(leftEyeO, rightEyeO);
   
-  /* Iris-based scaling for pinpoint accuracy */
   const lIris = landmarks[LM.leftIris[0]];
   const rIris = landmarks[LM.rightIris[0]];
   const lIrisH = dist3D(landmarks[LM.leftIris[1]], landmarks[LM.leftIris[2]]);
@@ -151,14 +150,8 @@ function extractFacePose(landmarks, vWidth, vHeight, facialMatrix, calibratedFac
   let scale;
 
   if (avgIrisH > 0.005) {
-    /* The core 'Pinpoint' logic: 
-       Translate the physical frame width (based on size selection) 
-       into 3D space using the Iris (11.7mm) as the constant ruler.
-    */
     const mmPerUnit = 11.7 / avgIrisH;
-    /* We want the model to be sized correctly for the user's calibrated width */
-    /* If the model was designed for a 140mm face, but the user is 130mm, we scale it */
-    scale = (mmPerUnit * 13.5) / modelWidth; // 13.5 is a heuristic for model units to mm
+    scale = (mmPerUnit * 13.5) / modelWidth;
   } else if (calibratedFaceWidth) {
     scale = (calibratedFaceWidth * (eyeOuterW / 0.085)) / modelWidth * 1.2;
   } else {
@@ -207,6 +200,8 @@ function extractFacePose(landmarks, vWidth, vHeight, facialMatrix, calibratedFac
   const anchor = avgLandmark(bridge, bridgeTop, innerMid);
 
   const pxBase = (0.5 - bridge.x) * vWidth;
+  const templeW = dist3D(leftTemple, rightTemple);
+  const faceW = (templeW * 0.4 + eyeOuterW * 0.6) * vWidth;
   const noseProtrusionScale = faceW * 0.12; 
   const yawCorr = Math.sin(yaw) * noseProtrusionScale;
   const px = pxBase + (yawCorr * vWidth);
@@ -288,11 +283,46 @@ function buildCatEye(color, matPbr) {
   addTemples(g, m.frame, [{ x: -0.92, sign: -1 }, { x: 0.92, sign: 1 }], 0.12); addHinges(g, m.hinge, [[-0.92, 0.12], [0.92, 0.12]]); addNosePads(g, m.hinge, [[-0.16, -0.16, 0.08], [0.16, -0.16, 0.08]]); return g;
 }
 
+/* ── GLB auto-tagger (shared with GlassesViewer) ── */
+function autoTagGLBMeshes(model) {
+  model.traverse(ch => {
+    if (!ch.isMesh) return;
+    const name = (ch.name || "").toLowerCase();
+    const mats = Array.isArray(ch.material) ? ch.material : [ch.material];
+
+    mats.forEach(mat => {
+      if (mat && mat.color) {
+        mat.userData._origColor = mat.color.clone();
+        mat.userData._isGLB = true;
+      }
+    });
+
+    if (!ch.userData.partName) {
+      const mat = mats[0];
+      const isTransparent = mat && (
+        mat.transparent ||
+        (mat.transmission !== undefined && mat.transmission > 0.3) ||
+        (mat.opacity !== undefined && mat.opacity < 0.8)
+      );
+      const isLensName = name.includes("lens") || name.includes("glass") || name.includes("lense");
+
+      if (isTransparent || isLensName) {
+        ch.userData.partName = name.includes("left") ? "left-lens" : "right-lens";
+      } else {
+        ch.userData.partName = "glb-frame";
+      }
+    }
+  });
+}
+
 const AR_FRAMES = [
   {
     id: "custom", name: "Eza Custom Design", url: "/models/glasses.glb",
     colors: [
       { name: "Original", frame: 0xffffff, lens: 0xffffff, accent: 0xffffff },
+      { name: "Midnight", frame: 0x3a3a4a, lens: 0x445566, accent: 0x6a6a7a },
+      { name: "Rose Gold", frame: 0xc08070, lens: 0x997777, accent: 0xd4a0a0 },
+      { name: "Forest", frame: 0x4a6a4a, lens: 0x3a5a3a, accent: 0x6a8a6a },
     ],
   },
   {
@@ -442,6 +472,10 @@ export default function ARTryOn({ onBack, faceWidth }) {
             }
           }
         });
+
+        /* ── Auto-tag all GLB meshes for color swapping ── */
+        autoTagGLBMeshes(model);
+
       } catch (err) {
         console.error("GLB Load Error:", err);
         return;
@@ -471,7 +505,7 @@ export default function ARTryOn({ onBack, faceWidth }) {
     sceneRef.current.glasses = pivot;
   }, [gltfLoader]);
 
-  /* ── Update colors without rebuilding geometry ── */
+  /* ── Update colors without rebuilding geometry (with GLB tinting) ── */
   const updateGlassesColor = useCallback((fIdx, cIdx) => {
     const { glasses } = sceneRef.current;
     if (!glasses) return;
@@ -488,13 +522,23 @@ export default function ARTryOn({ onBack, faceWidth }) {
 
       materials.forEach(mat => {
         if (!mat.color) return;
+        const isGLB = mat.userData._isGLB;
+        const orig = mat.userData._origColor;
+
         if (part.includes("lens")) {
-          mat.color.setHex(color.lens);
+          if (isGLB && orig) {
+            if (color.lens === 0xffffff) { mat.color.copy(orig); }
+            else { mat.color.copy(orig).multiply(new THREE.Color(color.lens)); }
+          } else {
+            mat.color.setHex(color.lens);
+          }
         } else if (part.includes("hinge") || part.includes("pad")) {
           mat.color.setHex(color.accent);
+        } else if (isGLB && orig) {
+          // GLB frame: tint relative to original
+          if (color.frame === 0xffffff) { mat.color.copy(orig); }
+          else { mat.color.copy(orig).multiply(new THREE.Color(color.frame)); }
         } else if (part) {
-          mat.color.setHex(color.frame);
-        } else if (f.url) {
           mat.color.setHex(color.frame);
         }
       });
@@ -993,7 +1037,8 @@ export default function ARTryOn({ onBack, faceWidth }) {
               {frame.colors.map((c, i) => (
                 <button key={i} className="ar-swatch" onClick={() => setColorIdx(i)} style={{
                   width: 36, height: 36, borderRadius: "50%", cursor: "pointer",
-                  background: hex(c.frame), border: colorIdx === i ? "3px solid #fff" : "3px solid rgba(255,255,255,0.15)",
+                  background: c.frame === 0xffffff ? "linear-gradient(135deg, #ccc 0%, #fff 50%, #ddd 100%)" : hex(c.frame),
+                  border: colorIdx === i ? "3px solid #fff" : "3px solid rgba(255,255,255,0.15)",
                   boxShadow: colorIdx === i ? "0 0 16px rgba(255,255,255,0.2)" : "none",
                   padding: 0,
                 }} />
