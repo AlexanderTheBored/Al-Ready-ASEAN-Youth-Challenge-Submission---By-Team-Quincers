@@ -306,7 +306,7 @@ export default function GlassesViewer() {
     [frameThumbnails]
   );
 
-  const lensImages = useMemo(() => generateLensImages(LENS_TYPES), []);
+  const lensImages = useMemo(() => generateLensImages(LENS_TYPES, frame.id), [frame.id]);
   const infiniteMenuLensItems = useMemo(() =>
     LENS_TYPES.map((lt, i) => ({
       image: lensImages[i],
@@ -844,8 +844,8 @@ export default function GlassesViewer() {
             {step === 2 && (<>
               <h2 style={{ fontFamily: "'Playfair Display', serif", fontSize: isSmall ? 22 : 26, fontWeight: 500, margin: "0 0 6px" }}>Select your lens</h2>
               <p style={{ fontSize: 13, opacity: 0.4, margin: "0 0 16px" }}>All lenses are scratch-resistant polycarbonate with UV protection.</p>
-              <div style={{ height: isSmall ? 280 : 340, position: "relative", borderRadius: 16, overflow: "hidden", border: "1px solid rgba(255,255,255,0.06)", background: "rgba(0,0,0,0.15)" }}>
-                <InfiniteMenu items={infiniteMenuLensItems} scale={isSmall ? 0.6 : 0.75} onActiveItemChange={(i) => setLensIdx(i)} />
+              <div style={{ height: isSmall ? 240 : isMobile ? 300 : 380, position: "relative", borderRadius: 16, overflow: "hidden", border: "1px solid rgba(255,255,255,0.06)", background: "rgba(0,0,0,0.15)" }}>
+                <InfiniteMenu items={infiniteMenuLensItems} scale={isSmall ? 0.55 : isMobile ? 0.65 : 0.8} onActiveItemChange={(i) => setLensIdx(i)} />
               </div>
               <div style={{ marginTop: 12, padding: "10px 16px", borderRadius: 10, background: "rgba(255,255,255,0.04)", border: "1px solid rgba(255,255,255,0.06)", display: "flex", justifyContent: "space-between", alignItems: "center" }}>
                 <div>

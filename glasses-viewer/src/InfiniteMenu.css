@@ -52,6 +52,16 @@
   opacity: 0;
   transition: 0.1s ease;
 }
+@media (max-width: 1200px) {
+  .face-title {
+    font-size: 1.3rem;
+    left: 0.8em;
+  }
+  .face-description {
+    font-size: 0.75rem;
+    max-width: 10ch;
+  }
+}
 @media (max-width: 900px) {
   .face-title,
   .face-description {
