@@ -41,6 +41,7 @@ precision highp float;
 uniform sampler2D uTex;
 uniform int uItemCount;
 uniform int uAtlasSize;
+uniform int uSelectedInstance;
 out vec4 outColor;
 in vec2 vUvs;
 in float vAlpha;
@@ -68,6 +69,18 @@ void main() {
 
     outColor = texture(uTex, st);
     outColor.a *= vAlpha;
+
+    // Selection glow ring for front-facing item
+    if (vInstanceId == uSelectedInstance) {
+        vec2 center = vec2(0.5, 0.5);
+        float dist = length(vUvs - center) * 2.0;
+        // Thin edge highlight
+        float ring = smoothstep(0.88, 0.95, dist) * smoothstep(1.0, 0.96, dist);
+        vec3 glowColor = vec3(0.4, 0.65, 1.0);
+        outColor.rgb += glowColor * ring * 0.5;
+        // Subtle overall brightness boost
+        outColor.rgb *= 1.05;
+    }
 }
 `;
 class Face {
@@ -290,9 +303,14 @@ class ArcballControl {
   snapTargetDirection;
   EPSILON = 0.1;
   IDENTITY_QUAT = quat.create();
-  constructor(canvas, updateCallback) {
+  pointerDownPos = vec2.create();
+  wasClick = false;
+  clickCallback = null;
+  CLICK_THRESHOLD = 5;
+  constructor(canvas, updateCallback, clickCallback) {
     this.canvas = canvas;
     this.updateCallback = updateCallback || (() => null);
+    this.clickCallback = clickCallback || null;
     this.pointerPos = vec2.create();
     this.previousPointerPos = vec2.create();
     this._rotationVelocity = 0;
@@ -300,9 +318,17 @@ class ArcballControl {
     canvas.addEventListener('pointerdown', e => {
       vec2.set(this.pointerPos, e.clientX, e.clientY);
       vec2.copy(this.previousPointerPos, this.pointerPos);
+      vec2.set(this.pointerDownPos, e.clientX, e.clientY);
       this.isPointerDown = true;
+      this.wasClick = false;
     });
-    canvas.addEventListener('pointerup', () => {
+    canvas.addEventListener('pointerup', e => {
+      const dx = e.clientX - this.pointerDownPos[0];
+      const dy = e.clientY - this.pointerDownPos[1];
+      if (Math.sqrt(dx * dx + dy * dy) < this.CLICK_THRESHOLD) {
+        this.wasClick = true;
+        if (this.clickCallback) this.clickCallback(e.clientX, e.clientY);
+      }
       this.isPointerDown = false;
     });
     canvas.addEventListener('pointerleave', () => {
@@ -337,14 +363,14 @@ class ArcballControl {
         quat.slerp(this.pointerRotation, this.pointerRotation, this.IDENTITY_QUAT, INTENSITY);
       }
     } else {
-      const INTENSITY = 0.1 * timeScale;
+      const INTENSITY = 0.15 * timeScale;
       quat.slerp(this.pointerRotation, this.pointerRotation, this.IDENTITY_QUAT, INTENSITY);
       if (this.snapTargetDirection) {
-        const SNAPPING_INTENSITY = 0.2;
+        const SNAPPING_INTENSITY = 0.5;
         const a = this.snapTargetDirection;
         const b = this.snapDirection;
         const sqrDist = vec3.squaredDistance(a, b);
-        const distanceFactor = Math.max(0.1, 1 - sqrDist * 10);
+        const distanceFactor = Math.max(0.3, 1 - sqrDist * 5);
         angleFactor *= SNAPPING_INTENSITY * distanceFactor;
         this.quatFromVectors(a, b, snapRotation, angleFactor);
       }
@@ -417,6 +443,7 @@ class InfiniteGridMenu {
     }
   };
   nearestVertexIndex = null;
+  selectedVertexIndex = -1;
   smoothRotationVelocity = 0;
   scaleFactor = 1.0;
   movementActive = false;
@@ -453,7 +480,7 @@ class InfiniteGridMenu {
     requestAnimationFrame(t => this.run(t));
   }
   #init(onInit) {
-    this.gl = this.canvas.getContext('webgl2', { antialias: true, alpha: false, powerPreference: 'low-power' });
+    this.gl = this.canvas.getContext('webgl2', { antialias: true, alpha: true, premultipliedAlpha: false, powerPreference: 'low-power' });
     const gl = this.gl;
     if (!gl) {
       throw new Error('No WebGL 2 context!');
@@ -479,7 +506,8 @@ class InfiniteGridMenu {
       uTex: gl.getUniformLocation(this.discProgram, 'uTex'),
       uFrames: gl.getUniformLocation(this.discProgram, 'uFrames'),
       uItemCount: gl.getUniformLocation(this.discProgram, 'uItemCount'),
-      uAtlasSize: gl.getUniformLocation(this.discProgram, 'uAtlasSize')
+      uAtlasSize: gl.getUniformLocation(this.discProgram, 'uAtlasSize'),
+      uSelectedInstance: gl.getUniformLocation(this.discProgram, 'uSelectedInstance')
     };
     this.discGeo = new DiscGeometry(56, 1);
     this.discBuffers = this.discGeo.data;
@@ -498,7 +526,7 @@ class InfiniteGridMenu {
     this.#initDiscInstances(this.DISC_INSTANCE_COUNT);
     this.worldMatrix = mat4.create();
     this.#initTexture();
-    this.control = new ArcballControl(this.canvas, deltaTime => this.#onControlUpdate(deltaTime));
+    this.control = new ArcballControl(this.canvas, deltaTime => this.#onControlUpdate(deltaTime), (cx, cy) => this.#onCanvasClick(cx, cy));
     this.#updateCameraMatrix();
     this.#updateProjectionMatrix(gl);
     this.resize();
@@ -569,7 +597,8 @@ class InfiniteGridMenu {
     const SCALE_INTENSITY = 0.6;
     positions.forEach((p, ndx) => {
       const s = (Math.abs(p[2]) / this.SPHERE_RADIUS) * SCALE_INTENSITY + (1 - SCALE_INTENSITY);
-      const finalScale = s * scale;
+      const selectedBonus = ndx === this.selectedVertexIndex ? 1.15 : 1.0;
+      const finalScale = s * scale * selectedBonus;
       const matrix = mat4.create();
       mat4.multiply(matrix, matrix, mat4.fromTranslation(mat4.create(), vec3.negate(vec3.create(), p)));
       mat4.multiply(matrix, matrix, mat4.targetTo(mat4.create(), [0, 0, 0], p, [0, 1, 0]));
@@ -587,6 +616,8 @@ class InfiniteGridMenu {
     gl.useProgram(this.discProgram);
     gl.enable(gl.CULL_FACE);
     gl.enable(gl.DEPTH_TEST);
+    gl.enable(gl.BLEND);
+    gl.blendFunc(gl.SRC_ALPHA, gl.ONE_MINUS_SRC_ALPHA);
     gl.clearColor(0, 0, 0, 0);
     gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
     gl.uniformMatrix4fv(this.discLocations.uWorldMatrix, false, this.worldMatrix);
@@ -607,6 +638,7 @@ class InfiniteGridMenu {
     );
     gl.uniform1i(this.discLocations.uItemCount, this.items.length);
     gl.uniform1i(this.discLocations.uAtlasSize, this.atlasSize);
+    gl.uniform1i(this.discLocations.uSelectedInstance, this.selectedVertexIndex);
     gl.uniform1f(this.discLocations.uFrames, this.#frames);
     gl.uniform1f(this.discLocations.uScaleFactor, this.scaleFactor);
     gl.uniform1i(this.discLocations.uTex, 0);
@@ -654,16 +686,68 @@ class InfiniteGridMenu {
     }
     if (!this.control.isPointerDown) {
       const nearestVertexIndex = this.#findNearestVertexIndex();
+      this.selectedVertexIndex = nearestVertexIndex;
       const itemIndex = nearestVertexIndex % Math.max(1, this.items.length);
       this.onActiveItemChange(itemIndex);
       const snapDirection = vec3.normalize(vec3.create(), this.#getVertexWorldPosition(nearestVertexIndex));
       this.control.snapTargetDirection = snapDirection;
     } else {
-      cameraTargetZ += this.control.rotationVelocity * 80 + 2.5;
+      cameraTargetZ += this.control.rotationVelocity * 30 + 0.8;
       damping = 7 / timeScale;
     }
     this.camera.position[2] += (cameraTargetZ - this.camera.position[2]) / damping;
     this.#updateCameraMatrix();
+  }
+  #onCanvasClick(clientX, clientY) {
+    const rect = this.canvas.getBoundingClientRect();
+    const x = ((clientX - rect.left) / rect.width) * 2 - 1;
+    const y = -(((clientY - rect.top) / rect.height) * 2 - 1);
+    // Unproject click to a ray in world space
+    const clipCoords = [x, y, -1, 1];
+    const invProj = this.camera.matrices.inversProjection;
+    const invView = this.camera.matrix;
+    // Eye space
+    const eye = [
+      invProj[0] * clipCoords[0] + invProj[4] * clipCoords[1] + invProj[8] * clipCoords[2] + invProj[12] * clipCoords[3],
+      invProj[1] * clipCoords[0] + invProj[5] * clipCoords[1] + invProj[9] * clipCoords[2] + invProj[13] * clipCoords[3],
+      invProj[2] * clipCoords[0] + invProj[6] * clipCoords[1] + invProj[10] * clipCoords[2] + invProj[14] * clipCoords[3],
+      invProj[3] * clipCoords[0] + invProj[7] * clipCoords[1] + invProj[11] * clipCoords[2] + invProj[15] * clipCoords[3]
+    ];
+    const rayDir = vec3.normalize(vec3.create(), [
+      invView[0] * eye[0] + invView[4] * eye[1] + invView[8] * eye[2],
+      invView[1] * eye[0] + invView[5] * eye[1] + invView[9] * eye[2],
+      invView[2] * eye[0] + invView[6] * eye[1] + invView[10] * eye[2]
+    ]);
+    // Find the instance whose world position is closest to the ray
+    let bestIndex = -1;
+    let bestDot = -Infinity;
+    for (let i = 0; i < this.instancePositions.length; i++) {
+      const worldPos = vec3.transformQuat(vec3.create(), this.instancePositions[i], this.control.orientation);
+      const dirToDisc = vec3.normalize(vec3.create(), vec3.subtract(vec3.create(), worldPos, this.camera.position));
+      const d = vec3.dot(rayDir, dirToDisc);
+      // Only consider front-facing discs (positive z in world)
+      if (d > bestDot && worldPos[2] > 0) {
+        bestDot = d;
+        bestIndex = i;
+      }
+    }
+    if (bestIndex >= 0 && bestDot > 0.95) {
+      this.#snapToVertex(bestIndex);
+    }
+  }
+  #snapToVertex(vertexIndex) {
+    // Set snap target so the sphere rotates to bring this vertex to the front
+    const worldPos = vec3.transformQuat(vec3.create(), this.instancePositions[vertexIndex], this.control.orientation);
+    const snapDir = vec3.normalize(vec3.create(), worldPos);
+    this.control.snapTargetDirection = snapDir;
+    // Kill any momentum so snapping is immediate
+    quat.copy(this.control.pointerRotation, this.control.IDENTITY_QUAT);
+    this.control._rotationVelocity = 0;
+    this.control.rotationVelocity = 0;
+    quat.copy(this.control._combinedQuat, this.control.IDENTITY_QUAT);
+    // Fire active item change immediately
+    const itemIndex = vertexIndex % Math.max(1, this.items.length);
+    this.onActiveItemChange(itemIndex);
   }
   #findNearestVertexIndex() {
     const n = this.control.snapDirection;
@@ -692,7 +776,7 @@ const defaultItems = [
     description: ''
   }
 ];
-export default function InfiniteMenu({ items = [], scale = 1.0, onActiveItemChange }) {
+export default function InfiniteMenu({ items = [], scale = 1.0, onActiveItemChange, selectedIndex = 0 }) {
   const canvasRef = useRef(null);
   const [activeItem, setActiveItem] = useState(null);
   const [isMoving, setIsMoving] = useState(false);

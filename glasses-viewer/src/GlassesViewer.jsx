@@ -845,7 +845,7 @@ export default function GlassesViewer() {
               <h2 style={{ fontFamily: "'Playfair Display', serif", fontSize: isSmall ? 22 : 26, fontWeight: 500, margin: "0 0 6px" }}>Select your lens</h2>
               <p style={{ fontSize: 13, opacity: 0.4, margin: "0 0 16px" }}>All lenses are scratch-resistant polycarbonate with UV protection.</p>
               <div style={{ height: isSmall ? 240 : isMobile ? 300 : 380, position: "relative", borderRadius: 16, overflow: "hidden", border: "1px solid rgba(255,255,255,0.06)", background: "rgba(0,0,0,0.15)" }}>
-                <InfiniteMenu items={infiniteMenuLensItems} scale={isSmall ? 0.55 : isMobile ? 0.65 : 0.8} onActiveItemChange={(i) => setLensIdx(i)} />
+                <InfiniteMenu items={infiniteMenuLensItems} scale={isSmall ? 0.55 : isMobile ? 0.65 : 0.8} onActiveItemChange={(i) => setLensIdx(i)} selectedIndex={lensIdx} />
               </div>
               <div style={{ marginTop: 12, padding: "10px 16px", borderRadius: 10, background: "rgba(255,255,255,0.04)", border: "1px solid rgba(255,255,255,0.06)", display: "flex", justifyContent: "space-between", alignItems: "center" }}>
                 <div>
@@ -854,7 +854,7 @@ export default function GlassesViewer() {
                 </div>
                 <span style={{ fontSize: 14, opacity: 0.5, fontFamily: "'JetBrains Mono', monospace", whiteSpace: "nowrap" }}>{LENS_TYPES[lensIdx].price === 0 ? "included" : `+₱${LENS_TYPES[lensIdx].price}`}</span>
               </div>
-              <p style={{ fontSize: 10, opacity: 0.2, marginTop: 8, textAlign: "center", letterSpacing: 1.5, textTransform: "uppercase" }}>{isMobile ? "Drag to rotate" : "Drag to rotate the sphere"}</p>
+              <p style={{ fontSize: 10, opacity: 0.2, marginTop: 8, textAlign: "center", letterSpacing: 1.5, textTransform: "uppercase" }}>{isMobile ? "Tap or drag to select" : "Click a lens or drag to rotate"}</p>
             </>)}
 
             {step === 3 && (<>
