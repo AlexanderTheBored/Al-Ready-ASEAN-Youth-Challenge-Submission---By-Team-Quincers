@@ -5,6 +5,7 @@ import ImpactPage from "./ImpactPage";
 import FitScanner from "./FitScanner";
 import ARTryOn from "./ARTryOn";
 import LensPicker from "./LensPicker";
+import ColorPicker from "./ColorPicker";
 
 import FlowingMenu from "./FlowingMenu";
 import useFrameThumbnails from "./useFrameThumbnails";
@@ -15,13 +16,14 @@ const lerp = (a, b, t) => a + (b - a) * t;
 const deg = (d) => (d * Math.PI) / 180;
 const hex = (n) => `#${n.toString(16).padStart(6, "0")}`;
 
+// Each step: { x, y, z } — z is camera distance
 const STEP_ANGLES = [
-  { x: deg(8),   y: deg(18)  },  // 0 Frame     — 3/4 hero angle
-  { x: deg(4),   y: deg(-22) },  // 1 Material  — left side, shows texture
-  { x: deg(12),  y: deg(2)   },  // 2 Lens      — face-on, lens tint pops
-  { x: deg(6),   y: deg(28)  },  // 3 Colour    — wide 3/4 shows pigment
-  { x: deg(-4),  y: deg(8)   },  // 4 Size      — slightly overhead, shows proportions
-  { x: deg(14),  y: deg(-18) },  // 5 Summary   — dramatic closing hero
+  { x: deg(8),   y: deg(25),  z: 2.85 }, // 0 Frame    — classic 3/4, temples visible
+  { x: deg(12),  y: deg(-18), z: 3.0  }, // 1 Material — slight top-left, rim texture catches light
+  { x: deg(0),   y: deg(4),   z: 2.55 }, // 2 Lens     — nearly face-on, lens occupies frame
+  { x: deg(6),   y: deg(-38), z: 2.75 }, // 3 Colour   — wide swing right, side profile, pigment shows
+  { x: deg(-8),  y: deg(18),  z: 3.1  }, // 4 Size     — low angle, full silhouette readable
+  { x: deg(10),  y: deg(10),  z: 2.45 }, // 5 Summary  — tight close hero, symmetrical and confident
 ];
 
 if (typeof document !== "undefined") {
@@ -519,17 +521,16 @@ export default function GlassesViewer() {
 
   /* ── exploded view ── */
   useEffect(() => {
-    const glasses = sceneRef.current.glasses; const camera = sceneRef.current.camera;
-    if (!glasses || !camera) return;
-    const targetZoom = exploded ? 4.2 : 2.8;
+    const glasses = sceneRef.current.glasses;
+    if (!glasses) return;
+    const { state } = sceneRef.current;
+    // Drive camera z through state.targetZ so animate loop handles it smoothly
+    if (state) state.targetZ = exploded ? 4.2 : (STEP_ANGLES[step]?.z ?? 2.8);
     let t = 0;
     const id = setInterval(() => {
       t += 0.04; if (t > 1) { clearInterval(id); t = 1; }
       const ease = 1 - Math.pow(1 - t, 3);
       const progress = exploded ? ease : 1 - ease;
-      const currentTarget = exploded ? targetZoom : 2.8;
-      const currentFrom = exploded ? 2.8 : 4.2;
-      camera.position.z = lerp(currentFrom, currentTarget, ease);
       glasses.children.forEach(child => {
         const name = child.userData.partName;
         if (!child._origPos) child._origPos = child.position.clone();
@@ -538,7 +539,7 @@ export default function GlassesViewer() {
       });
     }, 16);
     return () => clearInterval(id);
-  }, [exploded]);
+  }, [exploded, step]);
 
   /* ── label projection ── */
   useEffect(() => {
@@ -581,7 +582,7 @@ export default function GlassesViewer() {
     scene.add(new THREE.DirectionalLight(0xffffff, 0.9).translateY(3).translateZ(-4));
     const ground = new THREE.Mesh(new THREE.PlaneGeometry(8, 8), new THREE.ShadowMaterial({ opacity: 0.12 }));
     ground.rotation.x = -Math.PI / 2; ground.position.y = -0.55; ground.receiveShadow = true; scene.add(ground);
-    const state = { isDragging: false, prevX: 0, prevY: 0, velX: 0, velY: 0, targetRotX: deg(8), targetRotY: deg(0), mouseNX: 0, mouseNY: 0, introT: 0, autoRotatePausedUntil: 0 };
+const state = { isDragging: false, prevX: 0, prevY: 0, velX: 0, velY: 0, targetRotX: deg(8), targetRotY: deg(0), targetZ: 2.8, mouseNX: 0, mouseNY: 0, introT: 0 };
     sceneRef.current = { renderer, scene, camera, state, mount };
     buildGlasses(0, 0, 0, false);
     setTimeout(() => { setLoaded(true); setIntroPlayed(true); }, 100);
@@ -608,8 +609,9 @@ export default function GlassesViewer() {
       const pivot = sceneRef.current.pivot; if (!pivot) return;
       if (state.introT < 1) { state.introT += 0.012; camera.position.z = lerp(4.5, 2.8, 1 - Math.pow(1 - Math.min(state.introT, 1), 4)); }
       if (!state.isDragging) { state.velX *= 0.92; state.velY *= 0.92; state.targetRotY += state.velX; state.targetRotX += state.velY; }
-      pivot.rotation.y = lerp(pivot.rotation.y, state.targetRotY, 0.12);
-      pivot.rotation.x = lerp(pivot.rotation.x, state.targetRotX, 0.12);
+      pivot.rotation.y = lerp(pivot.rotation.y, state.targetRotY, 0.09);
+      pivot.rotation.x = lerp(pivot.rotation.x, state.targetRotX, 0.09);
+      camera.position.z = lerp(camera.position.z, state.targetZ ?? 2.8, 0.06);
       camera.position.x = lerp(camera.position.x, state.mouseNX * 0.1, 0.05);
       camera.position.y = lerp(camera.position.y, 0.15 - state.mouseNY * 0.06, 0.05);
       camera.lookAt(0, 0, 0); renderer.render(scene, camera);
@@ -658,16 +660,18 @@ export default function GlassesViewer() {
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [frameIdx, colorIdx, matIdx, lensIdx]);
 
-  /* ── Apple-style step spin ── */
-useEffect(() => {
-  const { state } = sceneRef.current;
-  if (!state || !introPlayed) return;
-  const angle = STEP_ANGLES[step];
-  state.targetRotX = angle.x;
-  state.targetRotY = angle.y;
-  state.velX = 0;
-  state.velY = 0;
-}, [step, introPlayed]);
+  /* ── Cinematic step transitions ── */
+  useEffect(() => {
+    const { state } = sceneRef.current;
+    if (!state || !introPlayed) return;
+    const angle = STEP_ANGLES[step];
+    state.targetRotX = angle.x;
+    state.targetRotY = angle.y;
+    state.targetZ    = angle.z;
+    state.velX = 0;
+    state.velY = 0;
+    setExploded(false);
+  }, [step, introPlayed]);
 
   /* ── inject CSS ── */
   useEffect(() => {
@@ -798,7 +802,7 @@ useEffect(() => {
             <button className="gv-explode" onClick={() => setExploded(!exploded)} style={{ background: exploded ? "rgba(255,255,255,0.12)" : "rgba(255,255,255,0.04)", border: "1px solid rgba(255,255,255,0.1)", color: "#fff", padding: "7px 18px", borderRadius: 8, cursor: "pointer", fontSize: 10, letterSpacing: 1.5, textTransform: "uppercase", fontFamily: "'DM Sans', sans-serif" }}>
               {exploded ? "◇ Assemble" : "◈ Explode"}
             </button>
-            <button className="gv-explode" onClick={() => { const { state } = sceneRef.current; if (!state) return; state.targetRotY += Math.PI * 2.2; state.velX = 0.08; state.autoRotatePausedUntil = Date.now() + 2200; }} style={{ background: "rgba(255,255,255,0.04)", border: "1px solid rgba(255,255,255,0.1)", color: "#fff", padding: "7px 18px", borderRadius: 8, cursor: "pointer", fontSize: 10, letterSpacing: 1.5, textTransform: "uppercase", fontFamily: "'DM Sans', sans-serif" }}>
+            <button className="gv-explode" onClick={() => { const { state } = sceneRef.current; if (!state) return; state.targetRotY += Math.PI * 2.2; state.velX = 0.08; }} style={{ background: "rgba(255,255,255,0.04)", border: "1px solid rgba(255,255,255,0.1)", color: "#fff", padding: "7px 18px", borderRadius: 8, cursor: "pointer", fontSize: 10, letterSpacing: 1.5, textTransform: "uppercase", fontFamily: "'DM Sans', sans-serif" }}>
               ↻ Spin
             </button>
           </div>
@@ -876,22 +880,16 @@ useEffect(() => {
 
             {step === 3 && (<>
               <h2 style={{ fontFamily: "'Playfair Display', serif", fontSize: isSmall ? 22 : 26, fontWeight: 500, margin: "0 0 6px" }}>Choose your colour</h2>
-              <p style={{ fontSize: 13, opacity: 0.4, margin: "0 0 20px" }}>
-                {frame.url ? "Colour tints are applied over the original design. 'Original' restores the default look." : "Pigment is mixed directly into the recycled filament before printing."}
+              <p style={{ fontSize: 13, opacity: 0.4, margin: "0 0 14px" }}>
+                {frame.url ? "Tints applied over the original design." : "Pigment mixed into the filament before printing."}
               </p>
-              <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
-                {frame.colors.map((c, i) => (
-                  <OptCard key={i} selected={colorIdx === i} onClick={() => setColorIdx(i)}>
-                    <div style={{ display: "flex", alignItems: "center", gap: 14 }}>
-                      <div style={{ width: 40, height: 40, borderRadius: "50%", background: c.frame === 0xffffff ? "linear-gradient(135deg, #ccc 0%, #fff 50%, #ddd 100%)" : hex(c.frame), border: "2px solid rgba(255,255,255,0.15)", flexShrink: 0 }} />
-                      <div>
-                        <span style={{ fontSize: 15, fontWeight: 500 }}>{c.name}</span>
-                        <p style={{ margin: "2px 0 0", fontSize: 11, opacity: 0.35 }}>{c.frame === 0xffffff ? "Original design colours" : "No additional cost"}</p>
-                      </div>
-                    </div>
-                  </OptCard>
-                ))}
-              </div>
+              <ColorPicker
+                colors={frame.colors}
+                colorIdx={colorIdx}
+                onSelect={(i) => setColorIdx(i)}
+                frameIsGLB={!!frame.url}
+                matIdx={matIdx}
+              />
             </>)}
 
             {step === 4 && (<>
