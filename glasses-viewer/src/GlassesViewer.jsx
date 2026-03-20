@@ -4,6 +4,7 @@ import { GLTFLoader } from "three/examples/jsm/loaders/GLTFLoader";
 import ImpactPage from "./ImpactPage";
 import FitScanner from "./FitScanner";
 import ARTryOn from "./ARTryOn";
+import LensPicker from "./LensPicker";
 
 import FlowingMenu from "./FlowingMenu";
 import useFrameThumbnails from "./useFrameThumbnails";
@@ -13,6 +14,15 @@ import { generateLensImages } from "./lensImages";
 const lerp = (a, b, t) => a + (b - a) * t;
 const deg = (d) => (d * Math.PI) / 180;
 const hex = (n) => `#${n.toString(16).padStart(6, "0")}`;
+
+const STEP_ANGLES = [
+  { x: deg(8),   y: deg(18)  },  // 0 Frame     — 3/4 hero angle
+  { x: deg(4),   y: deg(-22) },  // 1 Material  — left side, shows texture
+  { x: deg(12),  y: deg(2)   },  // 2 Lens      — face-on, lens tint pops
+  { x: deg(6),   y: deg(28)  },  // 3 Colour    — wide 3/4 shows pigment
+  { x: deg(-4),  y: deg(8)   },  // 4 Size      — slightly overhead, shows proportions
+  { x: deg(14),  y: deg(-18) },  // 5 Summary   — dramatic closing hero
+];
 
 if (typeof document !== "undefined") {
   const fl = document.createElement("link"); fl.rel = "stylesheet";
@@ -41,6 +51,8 @@ const LENS_TYPES = [
     tint: { color: 0x556655, transmission: 0.6, opacity: 0.55 } },
   { id: "tinted", name: "Gradient Tint", price: 249, desc: "Fashion-forward gradient tint. Darker at top, clear at bottom.",
     tint: { color: 0x665566, transmission: 0.7, opacity: 0.45 } },
+  { id: "photochromic", name: "Photochromic", price: 449, desc: "Automatically darkens in sunlight, clears indoors. UV100 block.",
+    tint: { color: 0x886644, transmission: 0.75, opacity: 0.30 } },
 ];
 
 const SIZES = [
@@ -569,7 +581,7 @@ export default function GlassesViewer() {
     scene.add(new THREE.DirectionalLight(0xffffff, 0.9).translateY(3).translateZ(-4));
     const ground = new THREE.Mesh(new THREE.PlaneGeometry(8, 8), new THREE.ShadowMaterial({ opacity: 0.12 }));
     ground.rotation.x = -Math.PI / 2; ground.position.y = -0.55; ground.receiveShadow = true; scene.add(ground);
-    const state = { isDragging: false, prevX: 0, prevY: 0, velX: 0, velY: 0, targetRotX: deg(8), targetRotY: deg(0), mouseNX: 0, mouseNY: 0, introT: 0 };
+    const state = { isDragging: false, prevX: 0, prevY: 0, velX: 0, velY: 0, targetRotX: deg(8), targetRotY: deg(0), mouseNX: 0, mouseNY: 0, introT: 0, autoRotatePausedUntil: 0 };
     sceneRef.current = { renderer, scene, camera, state, mount };
     buildGlasses(0, 0, 0, false);
     setTimeout(() => { setLoaded(true); setIntroPlayed(true); }, 100);
@@ -596,7 +608,6 @@ export default function GlassesViewer() {
       const pivot = sceneRef.current.pivot; if (!pivot) return;
       if (state.introT < 1) { state.introT += 0.012; camera.position.z = lerp(4.5, 2.8, 1 - Math.pow(1 - Math.min(state.introT, 1), 4)); }
       if (!state.isDragging) { state.velX *= 0.92; state.velY *= 0.92; state.targetRotY += state.velX; state.targetRotX += state.velY; }
-      state.targetRotY += 0.003;
       pivot.rotation.y = lerp(pivot.rotation.y, state.targetRotY, 0.12);
       pivot.rotation.x = lerp(pivot.rotation.x, state.targetRotX, 0.12);
       camera.position.x = lerp(camera.position.x, state.mouseNX * 0.1, 0.05);
@@ -646,6 +657,17 @@ export default function GlassesViewer() {
     prevFrameRef.current = frameIdx;
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [frameIdx, colorIdx, matIdx, lensIdx]);
+
+  /* ── Apple-style step spin ── */
+useEffect(() => {
+  const { state } = sceneRef.current;
+  if (!state || !introPlayed) return;
+  const angle = STEP_ANGLES[step];
+  state.targetRotX = angle.x;
+  state.targetRotY = angle.y;
+  state.velX = 0;
+  state.velY = 0;
+}, [step, introPlayed]);
 
   /* ── inject CSS ── */
   useEffect(() => {
@@ -750,7 +772,7 @@ export default function GlassesViewer() {
         {/* 3D VIEWPORT */}
         <div className="gv-viewport-wrap" style={{ flex: "1 1 480px", minWidth: 0, position: "relative", width: "100%" }}>
           <div style={{ position: "relative" }}>
-            <div ref={mountRef} style={{ width: "100%", aspectRatio: "4 / 3", borderRadius: isMobile ? 14 : 20, overflow: "hidden", cursor: "grab", opacity: loaded ? 1 : 0, transition: "opacity 1.2s cubic-bezier(0.4,0,0.2,1)", boxShadow: "0 0 80px rgba(0,0,0,0.3)", touchAction: "none" }} />
+            <div ref={mountRef} style={{ width: "100%", aspectRatio: "4 / 3", borderRadius: isMobile ? 14 : 20, overflow: "hidden", cursor: "grab", opacity: loaded ? 1 : 0, transition: "opacity 1.2s cubic-bezier(0.4,0,0.2,1)", boxShadow: "0 0 80px rgba(0,0,0,0.3)", touchAction: "none", background: "radial-gradient(ellipse at 40% 35%, rgba(28,28,52,0.95) 0%, rgba(5,5,14,1) 100%)" }} />
             {exploded && labelPositions.length > 0 && (
               <svg style={{ position: "absolute", top: 0, left: 0, width: "100%", height: "100%", pointerEvents: "none", overflow: "visible" }}>
                 {labelPositions.map((lp, i) => {
@@ -776,8 +798,8 @@ export default function GlassesViewer() {
             <button className="gv-explode" onClick={() => setExploded(!exploded)} style={{ background: exploded ? "rgba(255,255,255,0.12)" : "rgba(255,255,255,0.04)", border: "1px solid rgba(255,255,255,0.1)", color: "#fff", padding: "7px 18px", borderRadius: 8, cursor: "pointer", fontSize: 10, letterSpacing: 1.5, textTransform: "uppercase", fontFamily: "'DM Sans', sans-serif" }}>
               {exploded ? "◇ Assemble" : "◈ Explode"}
             </button>
-            <button className="gv-explode" onClick={() => { setExploded(false); if (sceneRef.current.state) { sceneRef.current.state.targetRotX = deg(8); sceneRef.current.state.targetRotY = deg(0); sceneRef.current.camera.position.z = 2.8; } }} style={{ background: "rgba(255,255,255,0.04)", border: "1px solid rgba(255,255,255,0.1)", color: "#fff", padding: "7px 18px", borderRadius: 8, cursor: "pointer", fontSize: 10, letterSpacing: 1.5, textTransform: "uppercase", fontFamily: "'DM Sans', sans-serif" }}>
-              ↺ Reset
+            <button className="gv-explode" onClick={() => { const { state } = sceneRef.current; if (!state) return; state.targetRotY += Math.PI * 2.2; state.velX = 0.08; state.autoRotatePausedUntil = Date.now() + 2200; }} style={{ background: "rgba(255,255,255,0.04)", border: "1px solid rgba(255,255,255,0.1)", color: "#fff", padding: "7px 18px", borderRadius: 8, cursor: "pointer", fontSize: 10, letterSpacing: 1.5, textTransform: "uppercase", fontFamily: "'DM Sans', sans-serif" }}>
+              ↻ Spin
             </button>
           </div>
           <p style={{ textAlign: "center", fontSize: 10, opacity: 0.2, marginTop: 8, letterSpacing: 1 }}>
@@ -841,21 +863,16 @@ export default function GlassesViewer() {
               </div>
             </>)}
 
-            {step === 2 && (<>
-              <h2 style={{ fontFamily: "'Playfair Display', serif", fontSize: isSmall ? 22 : 26, fontWeight: 500, margin: "0 0 6px" }}>Select your lens</h2>
-              <p style={{ fontSize: 13, opacity: 0.4, margin: "0 0 16px" }}>All lenses are scratch-resistant polycarbonate with UV protection.</p>
-              <div style={{ height: isSmall ? 240 : isMobile ? 300 : 380, position: "relative", borderRadius: 16, overflow: "hidden", border: "1px solid rgba(255,255,255,0.06)", background: "rgba(0,0,0,0.15)" }}>
-                <InfiniteMenu items={infiniteMenuLensItems} scale={isSmall ? 0.55 : isMobile ? 0.65 : 0.8} onActiveItemChange={(i) => setLensIdx(i)} selectedIndex={lensIdx} />
-              </div>
-              <div style={{ marginTop: 12, padding: "10px 16px", borderRadius: 10, background: "rgba(255,255,255,0.04)", border: "1px solid rgba(255,255,255,0.06)", display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-                <div>
-                  <span style={{ fontSize: 14, fontWeight: 500 }}>{LENS_TYPES[lensIdx].name}</span>
-                  <p style={{ margin: "2px 0 0", fontSize: 12, opacity: 0.4 }}>{LENS_TYPES[lensIdx].desc}</p>
-                </div>
-                <span style={{ fontSize: 14, opacity: 0.5, fontFamily: "'JetBrains Mono', monospace", whiteSpace: "nowrap" }}>{LENS_TYPES[lensIdx].price === 0 ? "included" : `+₱${LENS_TYPES[lensIdx].price}`}</span>
-              </div>
-              <p style={{ fontSize: 10, opacity: 0.2, marginTop: 8, textAlign: "center", letterSpacing: 1.5, textTransform: "uppercase" }}>{isMobile ? "Tap or drag to select" : "Click a lens or drag to rotate"}</p>
-            </>)}
+{step === 2 && (<>
+  <h2 style={{ fontFamily: "'Playfair Display', serif", fontSize: isSmall ? 22 : 26, fontWeight: 500, margin: "0 0 6px" }}>Select your lens</h2>
+  <p style={{ fontSize: 13, opacity: 0.4, margin: "0 0 14px" }}>All lenses are scratch-resistant polycarbonate with UV400 protection.</p>
+  <LensPicker
+    lensTypes={LENS_TYPES}
+    lensIdx={lensIdx}
+    onSelect={(i) => setLensIdx(i)}
+    frameId={frame.id}
+  />
+</>)}
 
             {step === 3 && (<>
               <h2 style={{ fontFamily: "'Playfair Display', serif", fontSize: isSmall ? 22 : 26, fontWeight: 500, margin: "0 0 6px" }}>Choose your colour</h2>
