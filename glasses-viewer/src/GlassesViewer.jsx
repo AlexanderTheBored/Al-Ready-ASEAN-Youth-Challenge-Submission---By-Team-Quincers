@@ -721,7 +721,7 @@ const state = { isDragging: false, prevX: 0, prevY: 0, velX: 0, velY: 0, targetR
         .gv-hamburger { display: flex !important; }
         .gv-main { flex-direction: column !important; }
         .gv-viewport-wrap { min-width: 0 !important; flex: 1 1 auto !important; }
-        .gv-panel-wrap { min-width: 0 !important; flex: 1 1 auto !important; max-width: 100% !important; }
+        .gv-panel-wrap { min-width: 0 !important; flex: 1 1 auto !important; max-width: 100% !important; width: 100% !important; }
       }
       @media (max-width: 480px) {
         .gv-main { padding: 12px 12px !important; gap: 20px !important; }
@@ -761,7 +761,7 @@ const state = { isDragging: false, prevX: 0, prevY: 0, velX: 0, velY: 0, targetR
               { label: "Our Impact", action: () => { setPage("impact"); window.scrollTo({ top: 0, behavior: "smooth" }); }, active: page === "impact" },
             ].map(item => (
               <button key={item.label} className="gv-nav-link" onClick={item.action || undefined}
-                style={{ background: "none", border: "none", color: "#fff", fontFamily: "'DM Sans', sans-serif", fontSize: 11, fontWeight: 500, letterSpacing: 1.5, textTransform: "uppercase", cursor: item.action ? "pointer" : "default", padding: "4px 0", opacity: item.active ? 1 : 0.655, borderBottom: item.active ? "1px solid rgba(255,255,255,0.6)" : "1px solid transparent", display: "flex", alignItems: "center", gap: 6 }}>
+                style={{ background: "none", border: "none", color: "#fff", fontFamily: "'DM Sans', sans-serif", fontSize: 11, fontWeight: 500, letterSpacing: 1.5, textTransform: "uppercase", cursor: item.action ? "pointer" : "default", padding: "4px 0", opacity: item.active ? 1 : 0.3, borderBottom: item.active ? "1px solid rgba(255,255,255,0.6)" : "1px solid transparent", display: "flex", alignItems: "center", gap: 6 }}>
                 {item.label}
               </button>
             ))}
@@ -779,7 +779,7 @@ const state = { isDragging: false, prevX: 0, prevY: 0, velX: 0, velY: 0, targetR
               { label: "Our Impact", action: () => { setPage("impact"); setMenuOpen(false); window.scrollTo({ top: 0, behavior: "smooth" }); }, active: page === "impact" },
             ].map(item => (
               <button key={item.label} onClick={item.action}
-                style={{ background: "none", border: "none", color: "#fff", fontFamily: "'DM Sans', sans-serif", fontSize: 14, padding: "10px 0", textAlign: "left", cursor: "pointer", letterSpacing: 1, textTransform: "uppercase", opacity: item.active ? 1 : 0.65 }}>{item.label}</button>
+                style={{ background: "none", border: "none", color: "#fff", fontFamily: "'DM Sans', sans-serif", fontSize: 14, padding: "10px 0", textAlign: "left", cursor: "pointer", letterSpacing: 1, textTransform: "uppercase", opacity: item.active ? 1 : 0.5 }}>{item.label}</button>
             ))}
           </div>
         )}
@@ -843,12 +843,12 @@ const state = { isDragging: false, prevX: 0, prevY: 0, velX: 0, velY: 0, targetR
 
           <div className="gv-price-ticker" style={{ marginTop: 20, padding: isSmall ? "12px 14px" : "16px 20px", borderRadius: 14, background: "rgba(255,255,255,0.04)", border: "1px solid rgba(255,255,255,0.06)", display: "flex", justifyContent: "space-between", alignItems: "center", gap: 12 }}>
             <div style={{ flex: 1, minWidth: 0 }}>
-              <p style={{ margin: 0, fontSize: 10, opacity: 0.5, letterSpacing: 1.5, textTransform: "uppercase", fontWeight: 600 }}>Your Build</p>
-              <p style={{ margin: "4px 0 0", fontSize: isSmall ? 11 : 13, opacity: 0.75, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{frame.name} · {material.name} · {lens.name}</p>
+              <p style={{ margin: 0, fontSize: 10, opacity: 0.35, letterSpacing: 1.5, textTransform: "uppercase", fontWeight: 600 }}>Your Build</p>
+              <p style={{ margin: "4px 0 0", fontSize: isSmall ? 11 : 13, opacity: 0.6, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{frame.name} · {material.name} · {lens.name}</p>
             </div>
             <div style={{ textAlign: "right", flexShrink: 0 }}>
               <p style={{ margin: 0, fontFamily: "'Playfair Display', serif", fontSize: isSmall ? 22 : 28, fontWeight: 600 }}>₱{totalPrice.toLocaleString()}</p>
-              <p style={{ margin: 0, fontSize: 10, opacity: 0.45 }}>estimated</p>
+              <p style={{ margin: 0, fontSize: 10, opacity: 0.3 }}>estimated</p>
             </div>
           </div>
         </div>
@@ -856,7 +856,7 @@ const state = { isDragging: false, prevX: 0, prevY: 0, velX: 0, velY: 0, targetR
         {/* CONFIGURATOR PANEL */}
         <div className="gv-panel-wrap" style={{ flex: "1 1 340px", minWidth: 0, maxWidth: "100%", display: "flex", flexDirection: "column", paddingTop: 4 }}>
           <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 20, animation: "gvFadeUp 0.4s ease both" }}>
-            <span style={{ fontSize: 10, opacity: 0.45, letterSpacing: 2, textTransform: "uppercase", fontWeight: 600 }}>Step {step + 1} of {STEPS.length}</span>
+            <span style={{ fontSize: 10, opacity: 0.3, letterSpacing: 2, textTransform: "uppercase", fontWeight: 600 }}>Step {step + 1} of {STEPS.length}</span>
             <div style={{ display: "flex", gap: 6 }}>
               {STEPS.map((_, i) => (
                 <button key={i} onClick={() => setStep(i)} style={{ width: i === step ? 20 : 8, height: 8, borderRadius: 4, background: i === step ? "rgba(255,255,255,0.8)" : i < step ? "rgba(255,255,255,0.3)" : "rgba(255,255,255,0.08)", border: "none", cursor: "pointer", transition: "all 0.4s cubic-bezier(0.23,1,0.32,1)", padding: 0 }} />
@@ -868,16 +868,16 @@ const state = { isDragging: false, prevX: 0, prevY: 0, velX: 0, velY: 0, targetR
 
             {step === 0 && (<>
               <h2 style={{ fontFamily: "'Playfair Display', serif", fontSize: isSmall ? 22 : 26, fontWeight: 500, margin: "0 0 6px" }}>Choose your frame</h2>
-              <p style={{ fontSize: 13, opacity: 0.65, margin: "0 0 16px" }}>Each frame is 3D printed from recycled materials to your exact specs.</p>
+              <p style={{ fontSize: 13, opacity: 0.4, margin: "0 0 16px" }}>Each frame is 3D printed from recycled materials to your exact specs.</p>
               <div style={{ height: menuHeight, maxHeight: isSmall ? 320 : 460, position: "relative", borderRadius: 16, overflow: "hidden", border: "1px solid rgba(255,255,255,0.06)" }}>
                 <FlowingMenu items={flowingMenuItems} speed={18} textColor="rgba(255,255,255,0.85)" bgColor="rgba(255,255,255,0.02)" marqueeBgColor="rgba(255,255,255,0.95)" marqueeTextColor="#060010" borderColor="rgba(255,255,255,0.06)" selectedIndex={frameIdx} onItemClick={(i) => { setFrameIdx(i); setColorIdx(0); }} />
               </div>
-              <p style={{ fontSize: 10, opacity: 0.3, marginTop: 10, textAlign: "center", letterSpacing: 1.5, textTransform: "uppercase" }}>{isMobile ? "Tap to select" : "Hover to preview · Click to select"}</p>
+              <p style={{ fontSize: 10, opacity: 0.2, marginTop: 10, textAlign: "center", letterSpacing: 1.5, textTransform: "uppercase" }}>{isMobile ? "Tap to select" : "Hover to preview · Click to select"}</p>
             </>)}
 
             {step === 1 && (<>
               <h2 style={{ fontFamily: "'Playfair Display', serif", fontSize: isSmall ? 22 : 26, fontWeight: 500, margin: "0 0 6px" }}>Pick your material</h2>
-              <p style={{ fontSize: 13, opacity: 0.65, margin: "0 0 20px" }}>All materials are sourced from post-consumer waste. Zero virgin plastic.</p>
+              <p style={{ fontSize: 13, opacity: 0.4, margin: "0 0 20px" }}>All materials are sourced from post-consumer waste. Zero virgin plastic.</p>
               <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
                 {MATERIALS.map((mt, i) => (
                   <OptCard key={mt.id} selected={matIdx === i} onClick={() => setMatIdx(i)}>
@@ -888,10 +888,10 @@ const state = { isDragging: false, prevX: 0, prevY: 0, velX: 0, velY: 0, targetR
                           <span style={{ fontSize: isSmall ? 13 : 15, fontWeight: 500 }}>{mt.name}</span>
                           <span style={{ fontSize: 9, padding: "2px 8px", borderRadius: 4, background: "rgba(255,255,255,0.06)", border: "1px solid rgba(255,255,255,0.08)", letterSpacing: 1, textTransform: "uppercase", opacity: 0.5 }}>{mt.tag}</span>
                         </div>
-                        <p style={{ margin: "0 0 4px", fontSize: 12, opacity: 0.6, lineHeight: 1.5 }}>{mt.desc}</p>
-                        <p style={{ margin: 0, fontSize: 10, opacity: 0.5, color: "#6fcf97" }}>{mt.co2}</p>
+                        <p style={{ margin: "0 0 4px", fontSize: 12, opacity: 0.4, lineHeight: 1.5 }}>{mt.desc}</p>
+                        <p style={{ margin: 0, fontSize: 10, opacity: 0.3, color: "#6fcf97" }}>{mt.co2}</p>
                       </div>
-                      <span style={{ fontSize: 14, opacity: 0.7, fontFamily: "'JetBrains Mono', monospace", whiteSpace: "nowrap", marginLeft: 12, flexShrink: 0 }}>{mt.price === 0 ? "included" : `+₱${mt.price}`}</span>
+                      <span style={{ fontSize: 14, opacity: 0.5, fontFamily: "'JetBrains Mono', monospace", whiteSpace: "nowrap", marginLeft: 12, flexShrink: 0 }}>{mt.price === 0 ? "included" : `+₱${mt.price}`}</span>
                     </div>
                   </OptCard>
                 ))}
@@ -900,7 +900,7 @@ const state = { isDragging: false, prevX: 0, prevY: 0, velX: 0, velY: 0, targetR
 
 {step === 2 && (<>
   <h2 style={{ fontFamily: "'Playfair Display', serif", fontSize: isSmall ? 22 : 26, fontWeight: 500, margin: "0 0 6px" }}>Select your lens</h2>
-  <p style={{ fontSize: 13, opacity: 0.65, margin: "0 0 14px" }}>All lenses are scratch-resistant polycarbonate with UV400 protection.</p>
+  <p style={{ fontSize: 13, opacity: 0.4, margin: "0 0 14px" }}>All lenses are scratch-resistant polycarbonate with UV400 protection.</p>
   <LensPicker
     lensTypes={LENS_TYPES}
     lensIdx={lensIdx}
@@ -911,7 +911,7 @@ const state = { isDragging: false, prevX: 0, prevY: 0, velX: 0, velY: 0, targetR
 
             {step === 3 && (<>
               <h2 style={{ fontFamily: "'Playfair Display', serif", fontSize: isSmall ? 22 : 26, fontWeight: 500, margin: "0 0 6px" }}>Choose your colour</h2>
-              <p style={{ fontSize: 13, opacity: 0.65, margin: "0 0 14px" }}>
+              <p style={{ fontSize: 13, opacity: 0.4, margin: "0 0 14px" }}>
                 {frame.url ? "Tints applied over the original design." : "Pigment mixed into the filament before printing."}
               </p>
               <ColorPicker
@@ -925,15 +925,15 @@ const state = { isDragging: false, prevX: 0, prevY: 0, velX: 0, velY: 0, targetR
 
             {step === 4 && (<>
               <h2 style={{ fontFamily: "'Playfair Display', serif", fontSize: isSmall ? 22 : 26, fontWeight: 500, margin: "0 0 6px" }}>Select your size</h2>
-              <p style={{ fontSize: 13, opacity: 0.65, margin: "0 0 8px" }}>3D printing means every pair can be made to measure. Pick your starting point.</p>
-              <p style={{ fontSize: 11, opacity: 0.4, margin: "0 0 20px" }}>In a future update, our AI face scanner will recommend the perfect fit automatically.</p>
+              <p style={{ fontSize: 13, opacity: 0.4, margin: "0 0 8px" }}>3D printing means every pair can be made to measure. Pick your starting point.</p>
+              <p style={{ fontSize: 11, opacity: 0.25, margin: "0 0 20px" }}>In a future update, our AI face scanner will recommend the perfect fit automatically.</p>
               <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
                 {SIZES.map((sz, i) => (
                   <OptCard key={sz.id} selected={sizeIdx === i} onClick={() => setSizeIdx(i)}>
                     <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
                       <div>
                         <span style={{ fontSize: 15, fontWeight: 500 }}>{sz.name}</span>
-                        <p style={{ margin: "2px 0 0", fontSize: 12, opacity: 0.6 }}>{sz.fit} · Total width: {sz.width}</p>
+                        <p style={{ margin: "2px 0 0", fontSize: 12, opacity: 0.4 }}>{sz.fit} · Total width: {sz.width}</p>
                       </div>
                     </div>
                   </OptCard>
@@ -967,15 +967,15 @@ const state = { isDragging: false, prevX: 0, prevY: 0, velX: 0, velY: 0, targetR
 
             {step === 5 && (<>
               <h2 style={{ fontFamily: "'Playfair Display', serif", fontSize: isSmall ? 22 : 26, fontWeight: 500, margin: "0 0 6px" }}>Your custom pair</h2>
-              <p style={{ fontSize: 13, opacity: 0.65, margin: "0 0 20px" }}>Review your configuration before ordering.</p>
+              <p style={{ fontSize: 13, opacity: 0.4, margin: "0 0 20px" }}>Review your configuration before ordering.</p>
               <div style={{ display: "flex", flexDirection: "column", gap: 1, borderRadius: 12, overflow: "hidden", marginBottom: 20 }}>
                 {[["Frame", frame.name, `₱${frame.basePrice.toLocaleString()}`],["Material", `${material.name} (${material.tag})`, material.price === 0 ? "included" : `+₱${material.price.toLocaleString()}`],["Lens", lens.name, lens.price === 0 ? "included" : `+₱${lens.price.toLocaleString()}`],["Colour", color.name, "included"],["Size", `${size.name} (${size.width})`, "included"]].map(([label, value, price], i) => (
                   <div key={label} style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: isSmall ? "10px 12px" : "12px 16px", background: i % 2 === 0 ? "rgba(255,255,255,0.04)" : "rgba(255,255,255,0.02)", gap: 8 }}>
                     <div style={{ minWidth: 0, flex: 1 }}>
-                      <span style={{ fontSize: 10, opacity: 0.5, letterSpacing: 1.5, textTransform: "uppercase", fontWeight: 600 }}>{label}</span>
+                      <span style={{ fontSize: 10, opacity: 0.35, letterSpacing: 1.5, textTransform: "uppercase", fontWeight: 600 }}>{label}</span>
                       <p style={{ margin: "2px 0 0", fontSize: isSmall ? 12 : 14, fontWeight: 500, overflow: "hidden", textOverflow: "ellipsis" }}>{value}</p>
                     </div>
-                    <span style={{ fontSize: 13, opacity: 0.7, fontFamily: "'JetBrains Mono', monospace", flexShrink: 0 }}>{price}</span>
+                    <span style={{ fontSize: 13, opacity: 0.5, fontFamily: "'JetBrains Mono', monospace", flexShrink: 0 }}>{price}</span>
                   </div>
                 ))}
               </div>
