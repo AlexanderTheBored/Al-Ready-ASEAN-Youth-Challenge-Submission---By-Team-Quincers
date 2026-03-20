@@ -729,6 +729,8 @@ const state = { isDragging: false, prevX: 0, prevY: 0, velX: 0, velY: 0, targetR
         .gv-price-ticker { flex-direction: column !important; gap: 10px !important; text-align: center !important; }
         .gv-price-ticker > div { text-align: center !important; }
       }
+      .gv-currency { font-weight: 500; font-size: 0.85em; vertical-align: baseline; position: relative; top: -0.05em; margin-right: 2px; }
+      .gv-price-val { font-variant-numeric: lining-nums; font-feature-settings: "lnum"; display: inline-flex; align-items: baseline; }
     `;
     document.head.appendChild(s);
   }, []);
@@ -847,7 +849,7 @@ const state = { isDragging: false, prevX: 0, prevY: 0, velX: 0, velY: 0, targetR
               <p style={{ margin: "4px 0 0", fontSize: isSmall ? 11 : 13, opacity: 0.6, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{frame.name} · {material.name} · {lens.name}</p>
             </div>
             <div style={{ textAlign: "right", flexShrink: 0 }}>
-              <p style={{ margin: 0, fontFamily: "'Playfair Display', serif", fontSize: isSmall ? 22 : 28, fontWeight: 600 }}>₱{totalPrice.toLocaleString()}</p>
+              <p style={{ margin: 0, fontFamily: "'Playfair Display', serif", fontSize: isSmall ? 22 : 28, fontWeight: 600 }} className="gv-price-val"><span className="gv-currency">₱</span>{totalPrice.toLocaleString()}</p>
               <p style={{ margin: 0, fontSize: 10, opacity: 0.3 }}>estimated</p>
             </div>
           </div>
@@ -891,7 +893,7 @@ const state = { isDragging: false, prevX: 0, prevY: 0, velX: 0, velY: 0, targetR
                         <p style={{ margin: "0 0 4px", fontSize: 12, opacity: 0.4, lineHeight: 1.5 }}>{mt.desc}</p>
                         <p style={{ margin: 0, fontSize: 10, opacity: 0.3, color: "#6fcf97" }}>{mt.co2}</p>
                       </div>
-                      <span style={{ fontSize: 14, opacity: 0.5, fontFamily: "'JetBrains Mono', monospace", whiteSpace: "nowrap", marginLeft: 12, flexShrink: 0 }}>{mt.price === 0 ? "included" : `+₱${mt.price}`}</span>
+                      <span style={{ fontSize: 14, opacity: 0.5, fontFamily: "'JetBrains Mono', monospace", whiteSpace: "nowrap", marginLeft: 12, flexShrink: 0 }} className="gv-price-val">{mt.price === 0 ? "included" : <><span className="gv-currency" style={{ fontSize: "0.9em", top: "-0.02em" }}>+₱</span>{mt.price}</>}</span>
                     </div>
                   </OptCard>
                 ))}
@@ -969,7 +971,7 @@ const state = { isDragging: false, prevX: 0, prevY: 0, velX: 0, velY: 0, targetR
               <h2 style={{ fontFamily: "'Playfair Display', serif", fontSize: isSmall ? 22 : 26, fontWeight: 500, margin: "0 0 6px" }}>Your custom pair</h2>
               <p style={{ fontSize: 13, opacity: 0.4, margin: "0 0 20px" }}>Review your configuration before ordering.</p>
               <div style={{ display: "flex", flexDirection: "column", gap: 1, borderRadius: 12, overflow: "hidden", marginBottom: 20 }}>
-                {[["Frame", frame.name, `₱${frame.basePrice.toLocaleString()}`],["Material", `${material.name} (${material.tag})`, material.price === 0 ? "included" : `+₱${material.price.toLocaleString()}`],["Lens", lens.name, lens.price === 0 ? "included" : `+₱${lens.price.toLocaleString()}`],["Colour", color.name, "included"],["Size", `${size.name} (${size.width})`, "included"]].map(([label, value, price], i) => (
+                {[["Frame", frame.name, <span className="gv-price-val"><span className="gv-currency" style={{ fontSize: "0.9em", top: "-0.02em" }}>₱</span>{frame.basePrice.toLocaleString()}</span>],["Material", `${material.name} (${material.tag})`, material.price === 0 ? "included" : <span className="gv-price-val"><span className="gv-currency" style={{ fontSize: "0.9em", top: "-0.02em" }}>+₱</span>{material.price.toLocaleString()}</span>],["Lens", lens.name, lens.price === 0 ? "included" : <span className="gv-price-val"><span className="gv-currency" style={{ fontSize: "0.9em", top: "-0.02em" }}>+₱</span>{lens.price.toLocaleString()}</span>],["Colour", color.name, "included"],["Size", `${size.name} (${size.width})`, "included"]].map(([label, value, price], i) => (
                   <div key={label} style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: isSmall ? "10px 12px" : "12px 16px", background: i % 2 === 0 ? "rgba(255,255,255,0.04)" : "rgba(255,255,255,0.02)", gap: 8 }}>
                     <div style={{ minWidth: 0, flex: 1 }}>
                       <span style={{ fontSize: 10, opacity: 0.35, letterSpacing: 1.5, textTransform: "uppercase", fontWeight: 600 }}>{label}</span>
@@ -985,7 +987,7 @@ const state = { isDragging: false, prevX: 0, prevY: 0, velX: 0, velY: 0, targetR
               </div>
               <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "16px 20px", borderRadius: 12, background: "rgba(255,255,255,0.06)", marginBottom: 20 }}>
                 <span style={{ fontSize: 14, fontWeight: 500 }}>Total</span>
-                <span style={{ fontFamily: "'Playfair Display', serif", fontSize: 32, fontWeight: 600 }}>₱{totalPrice.toLocaleString()}</span>
+                <span style={{ fontFamily: "'Playfair Display', serif", fontSize: 32, fontWeight: 600 }} className="gv-price-val"><span className="gv-currency">₱</span>{totalPrice.toLocaleString()}</span>
               </div>
               <button className="gv-cta" style={{ width: "100%", padding: "18px 0", background: "rgba(255,255,255,0.92)", color: "#000", border: "none", borderRadius: 12, fontFamily: "'DM Sans', sans-serif", fontSize: 13, fontWeight: 600, letterSpacing: 2, textTransform: "uppercase", cursor: "pointer", transition: "all 0.4s cubic-bezier(0.23,1,0.32,1)" }}>Order Custom Pair</button>
             </>)}
