@@ -1278,7 +1278,7 @@ export default function GlassesViewer() {
 
       {page === "impact" && (<div style={{ position: "relative", zIndex: 2, flex: 1, width: "100%" }}><ImpactPage /></div>)}
       {page === "scanner" && (<div style={{ position: "relative", zIndex: 2, flex: 1, width: "100%" }}><FitScanner onApplyFit={({ frameIdx: fIdx, sizeIdx: sIdx, faceWidth }) => { skipAnimRef.current = true; setFrameIdx(fIdx); setColorIdx(0); setSizeIdx(sIdx); setCalibratedFaceWidth(faceWidth); setStep(scanReturnStep != null ? scanReturnStep : 1); setScanReturnStep(null); setPage("configurator"); window.scrollTo({ top: 0, behavior: "smooth" }); }} /></div>)}
-      {page === "ar" && (<div style={{ position: "relative", zIndex: 2, flex: 1, width: "100%" }}><ARTryOn faceWidth={calibratedFaceWidth} onBack={() => { setPage("configurator"); setStep(6); window.scrollTo({ top: 0, behavior: "smooth" }); }} /></div>)}
+      {page === "ar" && (<div style={{ position: "relative", zIndex: 2, flex: 1, width: "100%" }}><ARTryOn faceWidth={calibratedFaceWidth} initialFrameId={frame.id} initialColorIdx={colorIdx} onBack={() => { setPage("configurator"); setStep(6); window.scrollTo({ top: 0, behavior: "smooth" }); }} /></div>)}
 
       <footer style={{ padding: isSmall ? "16px 12px" : 20, textAlign: "center", fontSize: 10, letterSpacing: 3, opacity: 0.2, textTransform: "uppercase", display: "flex", gap: isSmall ? 8 : 16, justifyContent: "center", flexWrap: "wrap", borderTop: "1px solid rgba(255,255,255,0.03)", marginTop: "auto", position: "relative", zIndex: 2 }}>
         <span>OPTIQ © 2026</span><span>·</span><span>Recycled eyewear, 3D printed for you</span>

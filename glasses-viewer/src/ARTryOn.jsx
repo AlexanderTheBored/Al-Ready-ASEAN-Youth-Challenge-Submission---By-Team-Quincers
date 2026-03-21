@@ -115,10 +115,6 @@ const LM = {
   rightIris: [473, 474, 475, 476, 477],
 };
 
-function dist3D(a, b, aspect = 1.333) {
-  return Math.sqrt((a.x - b.x) ** 2 + ((a.y - b.y) / aspect) ** 2 + ((a.z || 0) - (b.z || 0)) ** 2);
-}
-
 function avgLandmark(...lms) {
   const n = lms.length;
   return {
@@ -149,17 +145,14 @@ function extractFacePose(landmarks, vWidth, vHeight, facialMatrix, calibratedFac
   const modelWidth = 1.92;
   let scale;
 
-  // Use statistical face width as primary logic for better stability
   const templeW = normDist(leftTemple, rightTemple);
   const faceW = (templeW * 0.4 + eyeOuterW * 0.6) * vWidth;
   const standardScale = (faceW / modelWidth) * 1.6;
 
   if (calibratedFaceWidth) {
-    // calibrateFaceWidth is usually ~140-150mm. modelWidth (1.92) is about 192mm.
     const baseScale = (calibratedFaceWidth / 192);
     scale = baseScale * (eyeOuterW / 0.085) * 1.5;
   } else if (avgIrisH > 0.015) {
-    // Fine-tune with iris if very clear
     const unitsPerMm = avgIrisH / 11.7;
     const targetWInUnits = (145 * unitsPerMm) * vWidth;
     scale = (targetWInUnits / modelWidth) * 1.8;
@@ -171,27 +164,20 @@ function extractFacePose(landmarks, vWidth, vHeight, facialMatrix, calibratedFac
 
   if (facialMatrix && facialMatrix.data && facialMatrix.data.length >= 12) {
     const d = facialMatrix.data;
-    // MediaPipe matrix is Column-Major. Row-Major indices:
-    // Row 0: 0, 4, 8. Row 1: 1, 5, 9. Row 2: 2, 6, 10.
-    const R00 = d[0] || 1, R01 = d[4] || 0, R02 = d[8]  || 0;
+    const R00 = d[0] || 1, R02 = d[8]  || 0;
     const R10 = d[1] || 0, R11 = d[5] || 1, R12 = d[9]  || 0;
-    const R20 = d[2] || 0, R21 = d[6] || 0, R22 = d[10] || 1;
 
-    // Standard YXZ decomposition (Yaw, then Pitch, then Roll)
-    yaw = Math.atan2(R02, R22);
+    yaw = Math.atan2(R02, d[10] || 1);
     pitch = Math.asin(Math.max(-1, Math.min(1, -R12)));
     roll = Math.atan2(R10, R11);
 
-    // If any are NaN (should not happen with guards, but for safety)
     if (isNaN(yaw)) yaw = 0;
     if (isNaN(pitch)) pitch = 0;
     if (isNaN(roll)) roll = 0;
 
-    // Mirroring for scaleX(-1) video: Flip X-related signs
     yaw = -yaw;
     roll = -roll;
     
-    // Bounds for stability
     pitch = Math.max(-0.8, Math.min(0.8, pitch));
     yaw   = Math.max(-1.0, Math.min(1.0, yaw));
     roll  = Math.max(-0.6, Math.min(0.6, roll));
@@ -202,7 +188,6 @@ function extractFacePose(landmarks, vWidth, vHeight, facialMatrix, calibratedFac
     const totalDist = leftDist + rightDist;
     const yawNorm = totalDist > 0.001 ? ((leftDist / totalDist) - 0.5) * 2.0 : 0;
     yaw = Math.asin(Math.max(-0.95, Math.min(0.95, yawNorm * 0.9)));
-    // roll remains 0 or calculated via landmarks
     pitch = 0;
   }
 
@@ -210,7 +195,6 @@ function extractFacePose(landmarks, vWidth, vHeight, facialMatrix, calibratedFac
   const anchor = avgLandmark(bridge, bridgeTop, innerMid);
 
   const pxBase = (0.5 - bridge.x) * vWidth;
-  // Reduce protrusion force slightly for mobile stability
   const noseProtrusionScale = faceW * 0.1; 
   const yawCorr = Math.sin(yaw) * noseProtrusionScale;
   const px = pxBase + (yawCorr * vWidth) - (vWidth * 0.005);
@@ -326,7 +310,7 @@ function autoTagGLBMeshes(model) {
 
 const AR_FRAMES = [
   {
-    id: "custom", name: "Eza Custom Design", url: "/models/glasses.glb",
+    id: "custom", name: "Eza's Custom", url: "/models/glasses.glb",
     colors: [
       { name: "Original", frame: 0xffffff, lens: 0xffffff, accent: 0xffffff },
       { name: "Midnight", frame: 0x3a3a4a, lens: 0x445566, accent: 0x6a6a7a },
@@ -371,7 +355,7 @@ const AR_FRAMES = [
 /* ═══════════════════════════════════════════════════════════
    4. MAIN REACT COMPONENT
    ═══════════════════════════════════════════════════════════ */
-export default function ARTryOn({ onBack, faceWidth }) {
+export default function ARTryOn({ onBack, faceWidth, initialFrameId, initialColorIdx }) {
   const videoRef = useRef(null);
   const videoCanvasRef = useRef(null);
   const threeContainerRef = useRef(null);
@@ -385,19 +369,38 @@ export default function ARTryOn({ onBack, faceWidth }) {
   const targetOpacityRef = useRef(0);
   const prevFrameIdxRef = useRef(-1);
 
+  /* ── Resolve initial frame from configurator ── */
+  const resolvedInitialFrameIdx = useMemo(() => {
+    if (!initialFrameId) return 0;
+    const idx = AR_FRAMES.findIndex(f => f.id === initialFrameId);
+    return idx >= 0 ? idx : 0;
+  }, [initialFrameId]);
+
+  const resolvedInitialColorIdx = useMemo(() => {
+    const maxColors = AR_FRAMES[resolvedInitialFrameIdx]?.colors?.length || 1;
+    const idx = initialColorIdx ?? 0;
+    return idx < maxColors ? idx : 0;
+  }, [initialColorIdx, resolvedInitialFrameIdx]);
+
   const [status, setStatus] = useState("idle");
-  const [frameIdx, setFrameIdx] = useState(0);
-  const [colorIdx, setColorIdx] = useState(0);
+  const [frameIdx, setFrameIdx] = useState(resolvedInitialFrameIdx);
+  const [colorIdx, setColorIdx] = useState(resolvedInitialColorIdx);
   const [faceDetected, setFaceDetected] = useState(false);
   const [capturedImage, setCapturedImage] = useState(null);
   const [cameraError, setCameraError] = useState(null);
-  const [aspectRatio, setAspectRatio] = useState(4/3);
+
+  /* ── Refs that always reflect current state (used in stable callbacks) ── */
+  const frameIdxRef = useRef(frameIdx);
+  const colorIdxRef = useRef(colorIdx);
+  useEffect(() => { frameIdxRef.current = frameIdx; }, [frameIdx]);
+  useEffect(() => { colorIdxRef.current = colorIdx; }, [colorIdx]);
 
   const frame = AR_FRAMES[frameIdx];
   const color = frame.colors[colorIdx];
 
   const gltfLoader = useMemo(() => new GLTFLoader(), []);
   const reqIdRef = useRef(0);
+  const initCalledRef = useRef(false);
 
   /* ── inject CSS ── */
   useEffect(() => {
@@ -410,13 +413,14 @@ export default function ARTryOn({ onBack, faceWidth }) {
       @keyframes arFadeIn { from { opacity:0; transform:translateY(10px) } to { opacity:1; transform:translateY(0) } }
       @keyframes arSlideUp { from { opacity:0; transform:translateY(20px) } to { opacity:1; transform:translateY(0) } }
       .ar-frame-btn { transition: all 0.3s cubic-bezier(0.23,1,0.32,1) !important; }
-      .ar-frame-btn:hover { transform: translateY(-2px) !important; background: rgba(255,255,255,0.12) !important; }
+      .ar-frame-btn:hover { transform: translateY(-1px) !important; background: rgba(255,255,255,0.1) !important; }
+      .ar-frame-btn:active { transform: scale(0.97) !important; }
       .ar-swatch { transition: all 0.25s !important; }
-      .ar-swatch:hover { transform: scale(1.3) !important; }
+      .ar-swatch:hover { transform: scale(1.25) !important; }
       .ar-capture-btn { transition: all 0.3s !important; }
-      .ar-capture-btn:hover { transform: scale(1.1) !important; box-shadow: 0 0 30px rgba(255,255,255,0.3) !important; }
+      .ar-capture-btn:hover { transform: scale(1.08) !important; box-shadow: 0 0 30px rgba(255,255,255,0.25) !important; }
       .ar-back-btn { transition: all 0.3s !important; }
-      .ar-back-btn:hover { background: rgba(255,255,255,0.15) !important; }
+      .ar-back-btn:hover { background: rgba(255,255,255,0.12) !important; }
     `;
     document.head.appendChild(s);
   }, []);
@@ -471,7 +475,6 @@ export default function ARTryOn({ onBack, faceWidth }) {
         const scaleFac = targetWidth / Math.max(size.x, 0.1);
 
         model.scale.setScalar(scaleFac);
-        // Shift model forward 0.05 relative to pivot (which will be behind bridge)
         model.position.set(-center.x * scaleFac, -center.y * scaleFac, (-maxZ * scaleFac) + 0.05);
 
         model.traverse(ch => {
@@ -484,7 +487,6 @@ export default function ARTryOn({ onBack, faceWidth }) {
           }
         });
 
-        /* ── Auto-tag all GLB meshes for color swapping ── */
         autoTagGLBMeshes(model);
 
       } catch (err) {
@@ -494,13 +496,11 @@ export default function ARTryOn({ onBack, faceWidth }) {
     } else {
       const c = f.colors[cIdx];
       model = f.build(c, MATERIAL_PBR);
-      model.position.z += 0.05; // Shift procedural model too
+      model.position.z += 0.05;
     }
 
-    // Final request ID check before scene modification
     if (reqId !== reqIdRef.current) return;
 
-    // ELIMINATE GHOSTS: Clear the parent group completely
     while (glassesParent.children.length > 0) {
       const ch = glassesParent.children[0];
       glassesParent.remove(ch);
@@ -528,7 +528,7 @@ export default function ARTryOn({ onBack, faceWidth }) {
     sceneRef.current.glasses = pivot;
   }, [gltfLoader]);
 
-  /* ── Update colors without rebuilding geometry (with GLB tinting) ── */
+  /* ── Update colors without rebuilding geometry ── */
   const updateGlassesColor = useCallback((fIdx, cIdx) => {
     const { glasses } = sceneRef.current;
     if (!glasses) return;
@@ -558,7 +558,6 @@ export default function ARTryOn({ onBack, faceWidth }) {
         } else if (part.includes("hinge") || part.includes("pad")) {
           mat.color.setHex(color.accent);
         } else if (isGLB && orig) {
-          // GLB frame: tint relative to original
           if (color.frame === 0xffffff) { mat.color.copy(orig); }
           else { mat.color.copy(orig).multiply(new THREE.Color(color.frame)); }
         } else if (part) {
@@ -568,9 +567,11 @@ export default function ARTryOn({ onBack, faceWidth }) {
     });
   }, []);
 
-  /* ── Effect to smartly route rebuilds vs color paints ── */
+  /* ── Effect: rebuild or repaint when frame/color changes (NOT on init) ── */
   useEffect(() => {
-    if (!sceneRef.current.scene) return;
+    if (!sceneRef.current.scene || !sceneRef.current.glassesParent) return;
+    // Skip if we haven't finished initial setup yet
+    if (status !== "live" && status !== "captured") return;
 
     if (prevFrameIdxRef.current !== frameIdx) {
       buildGlasses(frameIdx, colorIdx);
@@ -580,10 +581,11 @@ export default function ARTryOn({ onBack, faceWidth }) {
     } else {
       updateGlassesColor(frameIdx, colorIdx);
     }
-  }, [frameIdx, colorIdx, buildGlasses, updateGlassesColor]);
+  }, [frameIdx, colorIdx, buildGlasses, updateGlassesColor, status]);
 
-  /* ── initialize MediaPipe ── */
+  /* ── initialize MediaPipe (only once, cached in ref) ── */
   const initFaceLandmarker = useCallback(async () => {
+    if (faceLandmarkerRef.current) return true; // Already initialized
     try {
       const isMobile = window.matchMedia("(max-width: 840px)").matches || /Mobi|Android/i.test(navigator.userAgent);
       const vision = await FilesetResolver.forVisionTasks(
@@ -611,6 +613,7 @@ export default function ARTryOn({ onBack, faceWidth }) {
 
   /* ── start camera ── */
   const startCamera = useCallback(async () => {
+    if (streamRef.current) return true; // Already running
     if (typeof navigator === "undefined" || !navigator.mediaDevices) {
       setCameraError("Camera API not supported in this browser.");
       setStatus("error");
@@ -635,26 +638,17 @@ export default function ARTryOn({ onBack, faceWidth }) {
         stream = await navigator.mediaDevices.getUserMedia(constraints);
       } catch (e) {
         console.warn("Camera: Preferred constraints failed, trying default...", e.name);
-        try {
-          stream = await navigator.mediaDevices.getUserMedia({ video: true });
-        } catch (e2) {
-          throw e2; // Re-throw the ultimate failure
-        }
+        stream = await navigator.mediaDevices.getUserMedia({ video: true });
       }
 
       streamRef.current = stream;
       if (videoRef.current) {
         videoRef.current.srcObject = stream;
-        try {
-          await videoRef.current.play();
-        } catch (playErr) {
-          console.error("Camera: Play error (Autoplay policy?):", playErr);
-          // Don't fail here, just log it, as some browsers might need a user action
-        }
+        try { await videoRef.current.play(); } catch (playErr) { console.error("Camera play error:", playErr); }
       }
       return true;
     } catch (err) {
-      console.error("Camera access ultimately failed:", err);
+      console.error("Camera access failed:", err);
       let msg = "Camera access denied. Please allow permissions and refresh.";
       if (err.name === "NotAllowedError" || err.name === "PermissionDeniedError") {
         msg = "Camera access denied. Click the 'lock' icon in your address bar to reset permissions.";
@@ -688,6 +682,7 @@ export default function ARTryOn({ onBack, faceWidth }) {
       try { threeContainerRef.current.removeChild(renderer.domElement); } catch (e) { /* ok */ }
     }
     sceneRef.current = {};
+    initCalledRef.current = false;
   }, []);
 
   /* ── Three.js setup ── */
@@ -701,10 +696,7 @@ export default function ARTryOn({ onBack, faceWidth }) {
     renderer.setSize(width, height);
     renderer.toneMapping = THREE.ACESFilmicToneMapping;
     renderer.toneMappingExposure = 1.4;
-    // KILL GHOSTS: Ensure container is empty before adding a new canvas
-    while (container.firstChild) {
-      container.removeChild(container.firstChild);
-    }
+    while (container.firstChild) container.removeChild(container.firstChild);
     container.appendChild(renderer.domElement);
     renderer.domElement.style.cssText = "position:absolute;top:0;left:0;width:100%;height:100%;pointer-events:none;";
 
@@ -715,17 +707,10 @@ export default function ARTryOn({ onBack, faceWidth }) {
     camera.lookAt(0, 0, -1);
 
     const scene = new THREE.Scene();
-
     scene.add(new THREE.AmbientLight(0xffffff, 0.7));
-    const key = new THREE.DirectionalLight(0xffffff, 1.2);
-    key.position.set(1, 2, 3);
-    scene.add(key);
-    const fill = new THREE.DirectionalLight(0x8888ff, 0.35);
-    fill.position.set(-2, 1, 2);
-    scene.add(fill);
-    const rim = new THREE.DirectionalLight(0xffffff, 0.5);
-    rim.position.set(0, 1, -3);
-    scene.add(rim);
+    const key = new THREE.DirectionalLight(0xffffff, 1.2); key.position.set(1, 2, 3); scene.add(key);
+    const fill = new THREE.DirectionalLight(0x8888ff, 0.35); fill.position.set(-2, 1, 2); scene.add(fill);
+    const rim = new THREE.DirectionalLight(0xffffff, 0.5); rim.position.set(0, 1, -3); scene.add(rim);
 
     const zDist = 2;
     const vHeight = 2 * zDist * Math.tan((fov * Math.PI / 180) / 2);
@@ -754,10 +739,7 @@ export default function ARTryOn({ onBack, faceWidth }) {
       rafRef.current = requestAnimationFrame(loop);
       if (video.readyState < 2) return;
 
-      if (!sceneRef.current || !sceneRef.current.vWidth || !sceneRef.current.vHeight) {
-        // If scene dimensions are not yet set, wait for the next frame
-        return;
-      }
+      if (!sceneRef.current || !sceneRef.current.vWidth || !sceneRef.current.vHeight) return;
 
       const { renderer, scene, camera, zDist, glasses } = sceneRef.current;
       if (!renderer || !glasses) return;
@@ -783,10 +765,7 @@ export default function ARTryOn({ onBack, faceWidth }) {
       const now = performance.now();
       const videoTime = video.currentTime;
       
-      // Save energy/CPU: skip if video frame hasn't actually advanced
-      if (sceneRef.current._lastVideoTime === videoTime) {
-        return;
-      }
+      if (sceneRef.current._lastVideoTime === videoTime) return;
       sceneRef.current._lastVideoTime = videoTime;
 
       const result = fl.detectForVideo(video, now);
@@ -811,7 +790,6 @@ export default function ARTryOn({ onBack, faceWidth }) {
         const fpitch = fb.filter("pitch", pose.pitch,       t);
         const fdepth = fb.filter("depth", pose.depthOffset, t);
 
-        // Place pivot 0.05 deep into the head from the bridge anchor
         glasses.position.set(fpx, fpy, -zDist + fdepth - 0.05);
         glasses.scale.setScalar(fscale);
 
@@ -855,33 +833,46 @@ export default function ARTryOn({ onBack, faceWidth }) {
     };
 
     rafRef.current = requestAnimationFrame(loop);
-  }, []);
+  }, [faceWidth]);
 
-  /* ── START EVERYTHING ── */
+  /* ══════════════════════════════════════════════════════════
+     START — runs ONCE. Uses refs for frame/color so it stays stable.
+     MediaPipe + camera + Three.js init happen here.
+     Frame/color changes are handled by a separate effect above.
+     ══════════════════════════════════════════════════════════ */
   const handleStart = useCallback(async () => {
+    if (initCalledRef.current) return;
+    initCalledRef.current = true;
+
     setStatus("loading");
     setCapturedImage(null);
     setCameraError(null);
 
     const okModel = await initFaceLandmarker();
     const okCamera = await startCamera();
-    if (!okModel || !okCamera || !videoRef.current) return;
+    if (!okModel || !okCamera || !videoRef.current) {
+      initCalledRef.current = false;
+      return;
+    }
 
     const container = threeContainerRef.current;
     const displayW = container?.clientWidth || videoRef.current.videoWidth || 640;
     const displayH = container?.clientHeight || videoRef.current.videoHeight || 480;
 
     initThreeJS(displayW, displayH);
-    buildGlasses(frameIdx, colorIdx);     
-    prevFrameIdxRef.current = frameIdx;
+    // Use refs so this callback doesn't depend on frameIdx/colorIdx state
+    await buildGlasses(frameIdxRef.current, colorIdxRef.current);
+    prevFrameIdxRef.current = frameIdxRef.current;
     startLoop();
     setStatus("live");
-  }, [initFaceLandmarker, startCamera, initThreeJS, buildGlasses, startLoop, frameIdx, colorIdx]);
+  }, [initFaceLandmarker, startCamera, initThreeJS, buildGlasses, startLoop]);
 
+  /* ── Mount: start once, cleanup on unmount ── */
   useEffect(() => {
     handleStart();
     return cleanup;
-  }, [handleStart, cleanup]);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   /* ── capture photo ── */
   const handleCapture = useCallback(() => {
@@ -940,25 +931,27 @@ export default function ARTryOn({ onBack, faceWidth }) {
   }, []);
 
   /* ═══════════════════════════════════════════════════════════
-     RENDER
+     RENDER — improved UI
      ═══════════════════════════════════════════════════════════ */
   return (
     <div style={{ width: "100%", maxWidth: 900, margin: "0 auto", padding: "0 16px 80px" }}>
-      <section style={{ paddingTop: 36, paddingBottom: 24, textAlign: "center" }}>
+      {/* Header */}
+      <section style={{ paddingTop: 36, paddingBottom: 20, textAlign: "center" }}>
         <p style={{ fontSize: 11, letterSpacing: 3, textTransform: "uppercase", opacity: 0.3, marginBottom: 10, fontWeight: 600 }}>
           Augmented Reality
         </p>
-        <h1 style={{ fontFamily: "'Playfair Display', serif", fontSize: "clamp(26px, 4vw, 40px)", fontWeight: 500, margin: "0 0 10px", lineHeight: 1.2 }}>
+        <h1 style={{ fontFamily: "'Playfair Display', serif", fontSize: "clamp(26px, 4vw, 40px)", fontWeight: 500, margin: "0 0 8px", lineHeight: 1.2 }}>
           Virtual Try-On
         </h1>
         <p style={{ fontSize: 13, opacity: 0.4, maxWidth: 460, margin: "0 auto" }}>
-          See how each frame looks on your face in real-time. Powered by MediaPipe Face Mesh with 468-point tracking.
+          See how each frame looks on your face in real-time.
         </p>
       </section>
 
+      {/* Camera viewport */}
       <div style={{
         position: "relative", width: "100%", maxWidth: 640, margin: "0 auto",
-        aspectRatio: aspectRatio, borderRadius: 20, overflow: "hidden",
+        aspectRatio: "4/3", borderRadius: 20, overflow: "hidden",
         background: "#0a0a0c", border: "1px solid rgba(255,255,255,0.06)",
         boxShadow: "0 8px 60px rgba(0,0,0,0.4)",
       }}>
@@ -996,7 +989,7 @@ export default function ARTryOn({ onBack, faceWidth }) {
             {status === "loading" && (
               <>
                 <div style={{ width: 36, height: 36, border: "2px solid rgba(111,207,151,0.3)", borderTopColor: "#6fcf97", borderRadius: "50%", animation: "gvSpin 0.8s linear infinite" }} />
-                <p style={{ fontSize: 13, opacity: 0.5 }}>Loading face tracking model...</p>
+                <p style={{ fontSize: 13, opacity: 0.5 }}>Loading face tracking...</p>
               </>
             )}
           </div>
@@ -1005,7 +998,7 @@ export default function ARTryOn({ onBack, faceWidth }) {
         {status === "error" && (
           <div style={{ position: "absolute", inset: 0, display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", gap: 12, padding: 32 }}>
             <p style={{ fontSize: 14, opacity: 0.6, textAlign: "center", color: "#ff6b6b" }}>{cameraError}</p>
-            <button onClick={handleStart} style={{
+            <button onClick={() => { initCalledRef.current = false; handleStart(); }} style={{
               padding: "10px 24px", borderRadius: 8, border: "1px solid rgba(255,255,255,0.1)", cursor: "pointer",
               background: "rgba(255,255,255,0.06)", color: "#fff", fontFamily: "'DM Sans', sans-serif", fontSize: 12,
               fontWeight: 500, letterSpacing: 1, textTransform: "uppercase",
@@ -1013,6 +1006,7 @@ export default function ARTryOn({ onBack, faceWidth }) {
           </div>
         )}
 
+        {/* Face guide */}
         {status === "live" && !faceDetected && (
           <div style={{
             position: "absolute", inset: 0,
@@ -1031,6 +1025,7 @@ export default function ARTryOn({ onBack, faceWidth }) {
           </div>
         )}
 
+        {/* Live indicator */}
         {status === "live" && faceDetected && (
           <div style={{
             position: "absolute", top: 14, left: 14,
@@ -1045,6 +1040,22 @@ export default function ARTryOn({ onBack, faceWidth }) {
           </div>
         )}
 
+        {/* Current frame badge */}
+        {status === "live" && faceDetected && (
+          <div style={{
+            position: "absolute", top: 14, right: 14,
+            padding: "5px 12px", borderRadius: 8,
+            background: "rgba(0,0,0,0.4)", backdropFilter: "blur(8px)",
+            border: "1px solid rgba(255,255,255,0.08)",
+            animation: "arFadeIn 0.3s ease both",
+          }}>
+            <span style={{ fontSize: 10, fontWeight: 600, letterSpacing: 1, opacity: 0.7 }}>
+              {frame.name} — {color.name}
+            </span>
+          </div>
+        )}
+
+        {/* Captured overlay */}
         {status === "captured" && (
           <div style={{
             position: "absolute", bottom: 0, left: 0, right: 0,
@@ -1068,9 +1079,11 @@ export default function ARTryOn({ onBack, faceWidth }) {
         )}
       </div>
 
+      {/* Controls below viewport */}
       {(status === "live" || status === "captured") && (
         <div style={{ maxWidth: 640, margin: "0 auto", animation: "arSlideUp 0.4s ease both" }}>
 
+          {/* Capture button */}
           {status === "live" && (
             <div style={{ display: "flex", justifyContent: "center", marginTop: 20 }}>
               <button className="ar-capture-btn" onClick={handleCapture} style={{
@@ -1078,48 +1091,70 @@ export default function ARTryOn({ onBack, faceWidth }) {
                 background: "rgba(255,255,255,0.9)", border: "4px solid rgba(255,255,255,0.3)",
                 display: "flex", alignItems: "center", justifyContent: "center",
                 boxShadow: "0 4px 24px rgba(0,0,0,0.3), inset 0 0 0 2px rgba(0,0,0,0.1)",
+                padding: 0,
               }}>
                 <div style={{ width: 48, height: 48, borderRadius: "50%", background: "#fff", border: "2px solid rgba(0,0,0,0.1)" }} />
               </button>
             </div>
           )}
 
+          {/* ── Frame selector — horizontal scrollable pills ── */}
           <div style={{ marginTop: 24 }}>
             <p style={{ fontSize: 10, letterSpacing: 2, textTransform: "uppercase", opacity: 0.3, marginBottom: 10, fontWeight: 600, textAlign: "center" }}>
               Frame Style
             </p>
-            <div style={{ display: "grid", gridTemplateColumns: "repeat(4, 1fr)", gap: 8 }}>
-              {AR_FRAMES.map((f, i) => (
-                <button key={f.id} className="ar-frame-btn" onClick={() => { setFrameIdx(i); setColorIdx(0); }} style={{
-                  padding: "12px 8px", borderRadius: 10, cursor: "pointer", textAlign: "center",
-                  border: frameIdx === i ? "1px solid rgba(255,255,255,0.4)" : "1px solid rgba(255,255,255,0.06)",
-                  background: frameIdx === i ? "rgba(255,255,255,0.08)" : "rgba(255,255,255,0.02)",
-                  color: "#fff", fontFamily: "'DM Sans', sans-serif",
-                }}>
-                  <span style={{ fontSize: 13, fontWeight: frameIdx === i ? 600 : 400, display: "block", marginBottom: 2 }}>{f.name.split(" ")[0]}</span>
-                  <span style={{ fontSize: 10, opacity: 0.35 }}>{f.name.split(" ").slice(1).join(" ")}</span>
-                </button>
-              ))}
+            <div style={{
+              display: "flex", gap: 6, overflowX: "auto", padding: "4px 0 8px",
+              scrollbarWidth: "none", WebkitOverflowScrolling: "touch",
+              justifyContent: AR_FRAMES.length <= 5 ? "center" : "flex-start",
+            }}>
+              {AR_FRAMES.map((f, i) => {
+                const isSelected = frameIdx === i;
+                return (
+                  <button
+                    key={f.id}
+                    className="ar-frame-btn"
+                    onClick={() => { setFrameIdx(i); setColorIdx(0); }}
+                    style={{
+                      padding: "10px 16px", borderRadius: 10, cursor: "pointer",
+                      border: isSelected ? "1.5px solid rgba(255,255,255,0.5)" : "1.5px solid rgba(255,255,255,0.08)",
+                      background: isSelected ? "rgba(255,255,255,0.1)" : "rgba(255,255,255,0.02)",
+                      color: "#fff", fontFamily: "'DM Sans', sans-serif",
+                      flexShrink: 0, whiteSpace: "nowrap",
+                      boxShadow: isSelected ? "0 0 16px rgba(255,255,255,0.06)" : "none",
+                    }}
+                  >
+                    <span style={{
+                      fontSize: 12, fontWeight: isSelected ? 600 : 400,
+                      letterSpacing: 0.5,
+                      opacity: isSelected ? 1 : 0.6,
+                    }}>
+                      {f.name}
+                    </span>
+                  </button>
+                );
+              })}
             </div>
           </div>
 
-          <div style={{ marginTop: 16 }}>
+          {/* ── Colour swatches ── */}
+          <div style={{ marginTop: 12 }}>
             <p style={{ fontSize: 10, letterSpacing: 2, textTransform: "uppercase", opacity: 0.3, marginBottom: 10, fontWeight: 600, textAlign: "center" }}>
               Colour — {color.name}
             </p>
-            <div style={{ display: "flex", justifyContent: "center", gap: 12 }}>
+            <div style={{ display: "flex", justifyContent: "center", gap: 10 }}>
               {frame.colors.map((c, i) => (
                 <button key={i} className="ar-swatch" onClick={() => setColorIdx(i)} style={{
-                  width: 36, height: 36, borderRadius: "50%", cursor: "pointer",
+                  width: 34, height: 34, borderRadius: "50%", cursor: "pointer", padding: 0,
                   background: c.frame === 0xffffff ? "linear-gradient(135deg, #ccc 0%, #fff 50%, #ddd 100%)" : hex(c.frame),
-                  border: colorIdx === i ? "3px solid #fff" : "3px solid rgba(255,255,255,0.15)",
-                  boxShadow: colorIdx === i ? "0 0 16px rgba(255,255,255,0.2)" : "none",
-                  padding: 0,
+                  border: colorIdx === i ? "3px solid rgba(255,255,255,0.85)" : "3px solid rgba(255,255,255,0.15)",
+                  boxShadow: colorIdx === i ? `0 0 14px ${c.frame === 0xffffff ? "rgba(255,255,255,0.2)" : hex(c.frame) + "55"}` : "none",
                 }} />
               ))}
             </div>
           </div>
 
+          {/* Back button */}
           {onBack && (
             <div style={{ marginTop: 24, textAlign: "center" }}>
               <button className="ar-back-btn" onClick={() => { cleanup(); onBack(); }} style={{
