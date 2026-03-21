@@ -105,11 +105,11 @@ function getRecommendation(m) {
   else { size = "Large"; sizeIdx = 2; }
 
   /* frame style recommendation based on face shape */
-  const frameRecs = {
-    round: { primary: 1, name: "Wayfarer Bold", reason: "Angular frames balance round features and add definition." },
-    square: { primary: 0, name: "Aviator Classic", reason: "Curved teardrop shape softens strong jawlines and angular features." },
-    oval: { primary: 2, name: "Round Wire", reason: "Oval faces suit almost anything. Round frames complement your balanced proportions." },
-    oblong: { primary: 3, name: "Cat-Eye Luxe", reason: "Wider frames with upswept corners add width and balance a longer face." },
+ const frameRecs = {
+    round: { primary: 2, name: "Wayfarer Bold", reason: "Angular frames balance round features and add definition." },
+    square: { primary: 1, name: "Aviator Classic", reason: "Curved teardrop shape softens strong jawlines and angular features." },
+    oval: { primary: 3, name: "Round Wire", reason: "Oval faces suit almost anything. Round frames complement your balanced proportions." },
+    oblong: { primary: 0, name: "Cat-Eye Luxe", reason: "Wider frames with upswept corners add width and balance a longer face." },
   };
 
   const rec = frameRecs[m.faceShape] || frameRecs.oval;
