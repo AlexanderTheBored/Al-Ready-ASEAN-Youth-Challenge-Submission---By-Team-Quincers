@@ -401,6 +401,7 @@ export default function ARTryOn({ onBack, faceWidth, initialFrameId, initialColo
 
   const gltfLoader = useMemo(() => new GLTFLoader(), []);
   const reqIdRef = useRef(0);
+  const gltfCacheRef = useRef({});
 
   /* ── inject CSS ── */
   useEffect(() => {
@@ -436,12 +437,19 @@ export default function ARTryOn({ onBack, faceWidth, initialFrameId, initialColo
     let model;
     if (f.url) {
       try {
-        const gltf = await new Promise((resolve, reject) => {
-          gltfLoader.load(f.url, resolve, undefined, reject);
-        });
-        if (reqId !== reqIdRef.current) return;
+        let rawScene;
+        if (gltfCacheRef.current[f.url]) {
+          rawScene = gltfCacheRef.current[f.url];
+        } else {
+          const gltf = await new Promise((resolve, reject) => {
+            gltfLoader.load(f.url, resolve, undefined, reject);
+          });
+          if (reqId !== reqIdRef.current) return;
+          rawScene = gltf.scene;
+          gltfCacheRef.current[f.url] = rawScene;
+        }
         
-        model = gltf.scene;
+        model = rawScene.clone();
         model.rotation.y = -Math.PI / 2;
         model.updateMatrixWorld(true);
 
@@ -715,18 +723,26 @@ export default function ARTryOn({ onBack, faceWidth, initialFrameId, initialColo
       rafRef.current = requestAnimationFrame(loop);
       if (video.readyState < 2) return;
 
-      if (!sceneRef.current || !sceneRef.current.vWidth || !sceneRef.current.vHeight) return;
+      if (!sceneRef.current) return;
 
       const { renderer, scene, camera, zDist, glasses } = sceneRef.current;
-      if (!renderer || !glasses) return;
+      if (!renderer) return;
 
       const vw = video.videoWidth;
       const vh = video.videoHeight;
-      if (vCanvas.width !== vw || vCanvas.height !== vh) {
+      const cw = vCanvas.clientWidth;
+      const ch = vCanvas.clientHeight;
+
+      if (!vw || !vh || !cw || !ch) return;
+      
+      if (vCanvas.width !== vw || vCanvas.height !== vh || sceneRef.current._lastCw !== cw || sceneRef.current._lastCh !== ch) {
         vCanvas.width = vw;
         vCanvas.height = vh;
-        renderer.setSize(vCanvas.clientWidth, vCanvas.clientHeight);
-        camera.aspect = vCanvas.clientWidth / vCanvas.clientHeight;
+        sceneRef.current._lastCw = cw;
+        sceneRef.current._lastCh = ch;
+        
+        renderer.setSize(cw, ch);
+        camera.aspect = cw / ch;
         camera.updateProjectionMatrix();
         const newVH = 2 * zDist * Math.tan((sceneRef.current.fov * Math.PI / 180) / 2);
         sceneRef.current.vHeight = newVH;
@@ -743,6 +759,11 @@ export default function ARTryOn({ onBack, faceWidth, initialFrameId, initialColo
       
       if (sceneRef.current._lastVideoTime === videoTime) return;
       sceneRef.current._lastVideoTime = videoTime;
+
+      if (!glasses) {
+        renderer.render(scene, camera);
+        return;
+      }
 
       const result = fl.detectForVideo(video, now);
       const hasFace = result.faceLandmarks && result.faceLandmarks.length > 0;
@@ -832,23 +853,15 @@ export default function ARTryOn({ onBack, faceWidth, initialFrameId, initialColo
         const okCam = await startCamera();
         if (!active || !okCam) return;
 
-        // Ensure video is ready before measuring dimensions for Three.js
-        const video = videoRef.current;
-        if (video && video.readyState < 2) {
-          await new Promise((resolve) => {
-            video.onloadedmetadata = () => resolve();
-          });
-        }
-        if (!active) return;
-
         const container = threeContainerRef.current;
         if (!container) return;
         
-        const displayW = container.clientWidth || video.videoWidth || 640;
-        const displayH = container.clientHeight || video.videoHeight || 480;
+        const video = videoRef.current;
+        const displayW = container.clientWidth || (video && video.videoWidth) || 640;
+        const displayH = container.clientHeight || (video && video.videoHeight) || 480;
 
         initThreeJS(displayW, displayH);
-        await buildGlasses(frameIdxRef.current, colorIdxRef.current);
+        buildGlasses(frameIdxRef.current, colorIdxRef.current);
         prevFrameIdxRef.current = frameIdxRef.current;
 
         if (active) {
