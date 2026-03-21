@@ -97,7 +97,7 @@ const LABEL_PARTS_W = ["right-lens","bridge","right-temple","right-hinge","right
 const FRAMES = [
   { id:"cat-eye", name:"Cat-Eye Luxe", category:"Statement", basePrice:249, tagline:"Lead, never follow", labelParts:LABEL_PARTS,
     dimensions:{lens:"55mm",bridge:"16mm",temple:"138mm",height:"46mm"},
-    description:"Dramatic upswept corners. Bold silhouette, hand-finished.",
+    description:"A high-index frame utilizing an upswept outer browline to comfortably accommodate wider pupillary distances and progressive lens fittings.",
     colors:[
       {name:"Burgundy",frame:0x6b2040,lens:0x553344,accent:0x8a3050,bg:["#14080e","#221018","#1a0c14"],particle:"#8a3050"},
       {name:"Ivory",frame:0xd4c8b0,lens:0x998877,accent:0xe8dcc0,bg:["#18160e","#28241a","#201c14"],particle:"#e8dcc0"},
@@ -105,7 +105,7 @@ const FRAMES = [
     ], build:buildCatEye },
   { id:"aviator", name:"Aviator Classic", category:"Sunglasses", basePrice:199, tagline:"Born to fly", labelParts:LABEL_PARTS,
     dimensions:{lens:"58mm",bridge:"14mm",temple:"140mm",height:"50mm"},
-    description:"Teardrop silhouette with double bridge. Iconic, lightweight, everyday ready.",
+    description:"A dual bridge structural wireframe built with teardrop geometry to maximize the user's field of vision and peripheral lens coverage.",
     colors:[
       {name:"Charcoal",frame:0x3a3a3a,lens:0x556b2f,accent:0x777777,bg:["#0f1114","#1a1d23","#12141a"],particle:"#666"},
       {name:"Sand",frame:0xc8a84e,lens:0x5a4a2a,accent:0xd4af37,bg:["#1a1508","#2a2010","#1e1a0c"],particle:"#c8a84e"},
@@ -113,7 +113,7 @@ const FRAMES = [
     ], build:buildAviator },
   { id:"wayfarer", name:"Wayfarer Bold", category:"Everyday", basePrice:149, tagline:"Unapologetically bold", labelParts:LABEL_PARTS_W,
     dimensions:{lens:"54mm",bridge:"18mm",temple:"145mm",height:"42mm"},
-    description:"Bold frame with slightly oversized fit. The all-rounder.",
+    description:"A heavy gauge trapezoidal frame constructed with wide temples to provide excellent optical stability and overall durability.",
     colors:[
       {name:"Matte Black",frame:0x1a1a1a,lens:0x333344,accent:0x444444,bg:["#08080a","#141418","#0c0c10"],particle:"#444"},
       {name:"Tortoise",frame:0x8b5e3c,lens:0x5a4530,accent:0xa0724a,bg:["#1a1008","#2a1d10","#1e140c"],particle:"#a0724a"},
@@ -121,7 +121,7 @@ const FRAMES = [
     ], build:buildWayfarer },
   { id:"round", name:"Round Wire", category:"Optical", basePrice:249, tagline:"Less is everything", labelParts:LABEL_PARTS,
     dimensions:{lens:"49mm",bridge:"20mm",temple:"135mm",height:"49mm"},
-    description:"Minimalist round frame. Adjustable nose pads, all-day comfort.",
+    description:"A symmetric circular aperture design that distributes structural tension evenly across the lens axis to maintain a lightweight profile.",
     colors:[
       {name:"Silver",frame:0xc0c0c0,lens:0x99bbdd,accent:0xe0e0e0,bg:["#0e1018","#181c28","#121620"],particle:"#c0c0c0"},
       {name:"Black",frame:0x222222,lens:0x445566,accent:0x555555,bg:["#0a0a0c","#141416","#0e0e12"],particle:"#555"},
@@ -129,7 +129,7 @@ const FRAMES = [
     ], build:buildRound },
   { id:"custom", name:"Eza's", category:"Custom", basePrice:449, tagline:"Your unique vision", labelParts:[],
     dimensions:{lens:"Custom",bridge:"Custom",temple:"Custom",height:"Custom"},
-    description:"Your hand-uploaded 3D design. Perfectly rendered, zero-compromise.",
+    description:"Utilizing a robust, classic trapezoidal architecture, Eza's is a signature model focused on maximized durability, comfort, and custom-mapped personalization.",
     url: "/models/glasses.glb",
     colors:[
       {name:"Original",frame:0xffffff,lens:0xffffff,accent:0xffffff,bg:["#0a0a0c","#141418","#0c0c10"],particle:"#fff"},
@@ -325,6 +325,7 @@ export default function GlassesViewer() {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           name: `${frame.name} (${material.name}, ${lens.name})`,
+          description: frame.description,
           price: totalPrice
         })
       });
