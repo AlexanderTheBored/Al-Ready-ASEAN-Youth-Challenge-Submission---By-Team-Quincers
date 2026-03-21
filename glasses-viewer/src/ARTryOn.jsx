@@ -364,6 +364,7 @@ export default function ARTryOn({ onBack, faceWidth, initialFrameId, initialColo
   const faceLandmarkerRef = useRef(null);
   const streamRef = useRef(null);
   const rafRef = useRef(null);
+  const initCalledRef = useRef(false);
 
   const glassesOpacityRef = useRef(0);
   const targetOpacityRef = useRef(0);
@@ -382,7 +383,7 @@ export default function ARTryOn({ onBack, faceWidth, initialFrameId, initialColo
     return idx < maxColors ? idx : 0;
   }, [initialColorIdx, resolvedInitialFrameIdx]);
 
-  const [status, setStatus] = useState("idle");
+  const [status, setStatus] = useState("loading"); // Start as loading
   const [frameIdx, setFrameIdx] = useState(resolvedInitialFrameIdx);
   const [colorIdx, setColorIdx] = useState(resolvedInitialColorIdx);
   const [faceDetected, setFaceDetected] = useState(false);
@@ -400,8 +401,6 @@ export default function ARTryOn({ onBack, faceWidth, initialFrameId, initialColo
 
   const gltfLoader = useMemo(() => new GLTFLoader(), []);
   const reqIdRef = useRef(0);
-  const initCalledRef = useRef(false);
-  const gltfCacheRef = useRef({});
 
   /* ── inject CSS ── */
   useEffect(() => {
@@ -437,19 +436,12 @@ export default function ARTryOn({ onBack, faceWidth, initialFrameId, initialColo
     let model;
     if (f.url) {
       try {
-        let rawScene;
-        if (gltfCacheRef.current[f.url]) {
-          rawScene = gltfCacheRef.current[f.url];
-        } else {
-          const gltf = await new Promise((resolve, reject) => {
-            gltfLoader.load(f.url, resolve, undefined, reject);
-          });
-          if (reqId !== reqIdRef.current) return;
-          rawScene = gltf.scene;
-          gltfCacheRef.current[f.url] = rawScene;
-        }
+        const gltf = await new Promise((resolve, reject) => {
+          gltfLoader.load(f.url, resolve, undefined, reject);
+        });
+        if (reqId !== reqIdRef.current) return;
         
-        model = rawScene.clone();
+        model = gltf.scene;
         model.rotation.y = -Math.PI / 2;
         model.updateMatrixWorld(true);
 
@@ -534,6 +526,7 @@ export default function ARTryOn({ onBack, faceWidth, initialFrameId, initialColo
 
     glassesParent.add(pivot);
     sceneRef.current.glasses = pivot;
+    glassesOpacityRef.current = 0; // Reset opacity after new build
   }, [gltfLoader]);
 
   /* ── Update colors without rebuilding geometry ── */
@@ -575,16 +568,14 @@ export default function ARTryOn({ onBack, faceWidth, initialFrameId, initialColo
     });
   }, []);
 
-  /* ── Effect: rebuild or repaint when frame/color changes (NOT on init) ── */
+  /* ── Effect: update model when frame/color changes ── */
   useEffect(() => {
-    if (!sceneRef.current.scene || !sceneRef.current.glassesParent) return;
-    // Skip if we haven't finished initial setup yet
     if (status !== "live" && status !== "captured") return;
+    if (!sceneRef.current.scene || !sceneRef.current.glassesParent) return;
 
     if (prevFrameIdxRef.current !== frameIdx) {
       buildGlasses(frameIdx, colorIdx);
       filterBankRef.current.reset();
-      glassesOpacityRef.current = 0;
       prevFrameIdxRef.current = frameIdx;
     } else {
       updateGlassesColor(frameIdx, colorIdx);
@@ -593,7 +584,7 @@ export default function ARTryOn({ onBack, faceWidth, initialFrameId, initialColo
 
   /* ── initialize MediaPipe (only once, cached in ref) ── */
   const initFaceLandmarker = useCallback(async () => {
-    if (faceLandmarkerRef.current) return true; // Already initialized
+    if (faceLandmarkerRef.current) return true;
     try {
       const isMobile = window.matchMedia("(max-width: 840px)").matches || /Mobi|Android/i.test(navigator.userAgent);
       const vision = await FilesetResolver.forVisionTasks(
@@ -613,64 +604,41 @@ export default function ARTryOn({ onBack, faceWidth, initialFrameId, initialColo
       return true;
     } catch (err) {
       console.error("MediaPipe init error:", err);
-      setCameraError("Failed to load AI model. Check your internet connection or browser compatibility.");
-      setStatus("error");
       return false;
     }
   }, []);
 
   /* ── start camera ── */
   const startCamera = useCallback(async () => {
-    if (streamRef.current) return true; // Already running
+    if (streamRef.current) return true;
     if (typeof navigator === "undefined" || !navigator.mediaDevices) {
-      setCameraError("Camera API not supported in this browser.");
-      setStatus("error");
-      return false;
+      throw new Error("Camera API not supported in this browser.");
     }
     if (!window.isSecureContext) {
-      setCameraError("AR requires a secure connection (HTTPS).");
-      setStatus("error");
-      return false;
+      throw new Error("AR requires a secure connection (HTTPS).");
     }
 
+    const isMobile = /Mobi|Android/i.test(navigator.userAgent) || window.innerWidth <= 840;
+    const constraints = {
+      video: isMobile 
+        ? { facingMode: "user", width: { ideal: 640 }, height: { ideal: 480 } }
+        : { facingMode: "user", width: { ideal: 1280 }, height: { ideal: 960 } }
+    };
+
+    let stream;
     try {
-      const isMobile = /Mobi|Android/i.test(navigator.userAgent) || window.innerWidth <= 840;
-      const constraints = {
-        video: isMobile 
-          ? { facingMode: "user", width: { ideal: 640 }, height: { ideal: 480 } }
-          : { facingMode: "user", width: { ideal: 1280 }, height: { ideal: 960 } }
-      };
-
-      let stream;
-      try {
-        stream = await navigator.mediaDevices.getUserMedia(constraints);
-      } catch (e) {
-        console.warn("Camera: Preferred constraints failed, trying default...", e.name);
-        stream = await navigator.mediaDevices.getUserMedia({ video: true });
-      }
-
-      streamRef.current = stream;
-      if (videoRef.current) {
-        videoRef.current.srcObject = stream;
-        try { await videoRef.current.play(); } catch (playErr) { console.error("Camera play error:", playErr); }
-      }
-      return true;
-    } catch (err) {
-      console.error("Camera access failed:", err);
-      let msg = "Camera access denied. Please allow permissions and refresh.";
-      if (err.name === "NotAllowedError" || err.name === "PermissionDeniedError") {
-        msg = "Camera access denied. Click the 'lock' icon in your address bar to reset permissions.";
-      } else if (err.name === "NotFoundError" || err.name === "DevicesNotFoundError") {
-        msg = "No camera found. Please connect a webcam.";
-      } else if (err.name === "NotReadableError" || err.name === "TrackStartError") {
-        msg = "Camera is being used by another application.";
-      } else if (err.name === "OverconstrainedError") {
-        msg = "Your camera doesn't support the requested resolution.";
-      }
-      setCameraError(msg);
-      setStatus("error");
-      return false;
+      stream = await navigator.mediaDevices.getUserMedia(constraints);
+    } catch (e) {
+      console.warn("Camera: Preferred constraints failed, trying default...", e.name);
+      stream = await navigator.mediaDevices.getUserMedia({ video: true });
     }
+
+    streamRef.current = stream;
+    if (videoRef.current) {
+      videoRef.current.srcObject = stream;
+      try { await videoRef.current.play(); } catch (playErr) { console.error("Camera play error:", playErr); }
+    }
+    return true;
   }, []);
 
   /* ── stop everything ── */
@@ -750,7 +718,7 @@ export default function ARTryOn({ onBack, faceWidth, initialFrameId, initialColo
       if (!sceneRef.current || !sceneRef.current.vWidth || !sceneRef.current.vHeight) return;
 
       const { renderer, scene, camera, zDist, glasses } = sceneRef.current;
-      if (!renderer) return;
+      if (!renderer || !glasses) return;
 
       const vw = video.videoWidth;
       const vh = video.videoHeight;
@@ -775,11 +743,6 @@ export default function ARTryOn({ onBack, faceWidth, initialFrameId, initialColo
       
       if (sceneRef.current._lastVideoTime === videoTime) return;
       sceneRef.current._lastVideoTime = videoTime;
-      
-      if (!glasses) {
-        renderer.render(scene, camera);
-        return;
-      }
 
       const result = fl.detectForVideo(video, now);
       const hasFace = result.faceLandmarks && result.faceLandmarks.length > 0;
@@ -849,42 +812,66 @@ export default function ARTryOn({ onBack, faceWidth, initialFrameId, initialColo
   }, [faceWidth]);
 
   /* ══════════════════════════════════════════════════════════
-     START — runs ONCE. Uses refs for frame/color so it stays stable.
-     MediaPipe + camera + Three.js init happen here.
-     Frame/color changes are handled by a separate effect above.
+     START — runs ONCE to init Engine/Camera
      ══════════════════════════════════════════════════════════ */
-  const handleStart = useCallback(async () => {
-    if (initCalledRef.current) return;
-    initCalledRef.current = true;
+  useEffect(() => {
+    let active = true;
 
-    setStatus("loading");
-    setCapturedImage(null);
-    setCameraError(null);
+    async function setup() {
+      if (initCalledRef.current) return;
+      initCalledRef.current = true;
 
-    const okModel = await initFaceLandmarker();
-    const okCamera = await startCamera();
-    if (!okModel || !okCamera || !videoRef.current) {
-      initCalledRef.current = false;
-      return;
+      try {
+        setStatus("loading");
+        
+        const okModel = await initFaceLandmarker();
+        if (!active || !okModel) {
+          throw new Error("Failed to load AI model.");
+        }
+
+        const okCam = await startCamera();
+        if (!active || !okCam) return;
+
+        // Ensure video is ready before measuring dimensions for Three.js
+        const video = videoRef.current;
+        if (video && video.readyState < 2) {
+          await new Promise((resolve) => {
+            video.onloadedmetadata = () => resolve();
+          });
+        }
+        if (!active) return;
+
+        const container = threeContainerRef.current;
+        if (!container) return;
+        
+        const displayW = container.clientWidth || video.videoWidth || 640;
+        const displayH = container.clientHeight || video.videoHeight || 480;
+
+        initThreeJS(displayW, displayH);
+        await buildGlasses(frameIdxRef.current, colorIdxRef.current);
+        prevFrameIdxRef.current = frameIdxRef.current;
+
+        if (active) {
+          setStatus("live");
+          startLoop();
+        }
+      } catch (err) {
+        console.error("Setup failed:", err);
+        if (active) {
+          setCameraError(err.message || "Camera access denied or device not found.");
+          setStatus("error");
+        }
+      }
     }
 
-    const container = threeContainerRef.current;
-    const displayW = container?.clientWidth || videoRef.current.videoWidth || 640;
-    const displayH = container?.clientHeight || videoRef.current.videoHeight || 480;
+    setup();
 
-    initThreeJS(displayW, displayH);
-    // Use refs so this callback doesn't depend on frameIdx/colorIdx state
-    buildGlasses(frameIdxRef.current, colorIdxRef.current);
-    prevFrameIdxRef.current = frameIdxRef.current;
-    startLoop();
-    setStatus("live");
-  }, [initFaceLandmarker, startCamera, initThreeJS, buildGlasses, startLoop]);
-
-  /* ── Mount: start once, cleanup on unmount ── */
-    useEffect(() => {
-    handleStart();
-    return cleanup;
-  }, [handleStart, cleanup]);
+    return () => {
+      active = false;
+      cleanup();
+    };
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []); // Empty dependency array ensures this runs exactly once on mount
   
   /* ── capture photo ── */
   const handleCapture = useCallback(() => {
@@ -1001,7 +988,7 @@ export default function ARTryOn({ onBack, faceWidth, initialFrameId, initialColo
             {status === "loading" && (
               <>
                 <div style={{ width: 36, height: 36, border: "2px solid rgba(111,207,151,0.3)", borderTopColor: "#6fcf97", borderRadius: "50%", animation: "gvSpin 0.8s linear infinite" }} />
-                <p style={{ fontSize: 13, opacity: 0.5 }}>Loading face tracking...</p>
+                <p style={{ fontSize: 13, opacity: 0.5 }}>Loading AR & Camera...</p>
               </>
             )}
           </div>
@@ -1010,7 +997,7 @@ export default function ARTryOn({ onBack, faceWidth, initialFrameId, initialColo
         {status === "error" && (
           <div style={{ position: "absolute", inset: 0, display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", gap: 12, padding: 32 }}>
             <p style={{ fontSize: 14, opacity: 0.6, textAlign: "center", color: "#ff6b6b" }}>{cameraError}</p>
-            <button onClick={() => { initCalledRef.current = false; handleStart(); }} style={{
+            <button onClick={() => window.location.reload()} style={{
               padding: "10px 24px", borderRadius: 8, border: "1px solid rgba(255,255,255,0.1)", cursor: "pointer",
               background: "rgba(255,255,255,0.06)", color: "#fff", fontFamily: "'DM Sans', sans-serif", fontSize: 12,
               fontWeight: 500, letterSpacing: 1, textTransform: "uppercase",
