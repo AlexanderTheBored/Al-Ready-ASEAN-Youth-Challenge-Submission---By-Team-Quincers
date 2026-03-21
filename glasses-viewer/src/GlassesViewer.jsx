@@ -11,6 +11,10 @@ import FlowingMenu from "./FlowingMenu";
 import useFrameThumbnails from "./useFrameThumbnails";
 import InfiniteMenu from "./InfiniteMenu";
 import { generateLensImages } from "./lensImages";
+import { loadStripe } from '@stripe/stripe-js';
+
+// Hardcoded for GitHub collaborators (Safe to expose public/publishable keys)
+const stripePromise = loadStripe("pk_test_51TD5Bq6Bm4yl4VWVBfDyCePfI5i9MYQbrN1TR0N9m4O4bJ6oPTBFoSmPo8lKmppyaFW8qT4Oza3lNNYCvfAZly5N00AnBMc7Im");
 
 const lerp = (a, b, t) => a + (b - a) * t;
 const deg = (d) => (d * Math.PI) / 180;
@@ -93,7 +97,7 @@ const LABEL_PARTS_W = ["right-lens","bridge","right-temple","right-hinge","right
 const FRAMES = [
   { id:"cat-eye", name:"Cat-Eye Luxe", category:"Statement", basePrice:249, tagline:"Lead, never follow", labelParts:LABEL_PARTS,
     dimensions:{lens:"55mm",bridge:"16mm",temple:"138mm",height:"46mm"},
-    description:"Dramatic upswept corners. Bold silhouette, hand-finished.",
+    description:"A high-index frame utilizing an upswept outer browline to comfortably accommodate wider pupillary distances and progressive lens fittings.",
     colors:[
       {name:"Burgundy",frame:0x6b2040,lens:0x553344,accent:0x8a3050,bg:["#14080e","#221018","#1a0c14"],particle:"#8a3050"},
       {name:"Ivory",frame:0xd4c8b0,lens:0x998877,accent:0xe8dcc0,bg:["#18160e","#28241a","#201c14"],particle:"#e8dcc0"},
@@ -101,7 +105,7 @@ const FRAMES = [
     ], build:buildCatEye },
   { id:"aviator", name:"Aviator Classic", category:"Sunglasses", basePrice:199, tagline:"Born to fly", labelParts:LABEL_PARTS,
     dimensions:{lens:"58mm",bridge:"14mm",temple:"140mm",height:"50mm"},
-    description:"Teardrop silhouette with double bridge. Iconic, lightweight, everyday ready.",
+    description:"A dual bridge structural wireframe built with teardrop geometry to maximize the user's field of vision and peripheral lens coverage.",
     colors:[
       {name:"Charcoal",frame:0x3a3a3a,lens:0x556b2f,accent:0x777777,bg:["#0f1114","#1a1d23","#12141a"],particle:"#666"},
       {name:"Sand",frame:0xc8a84e,lens:0x5a4a2a,accent:0xd4af37,bg:["#1a1508","#2a2010","#1e1a0c"],particle:"#c8a84e"},
@@ -109,7 +113,7 @@ const FRAMES = [
     ], build:buildAviator },
   { id:"wayfarer", name:"Wayfarer Bold", category:"Everyday", basePrice:149, tagline:"Unapologetically bold", labelParts:LABEL_PARTS_W,
     dimensions:{lens:"54mm",bridge:"18mm",temple:"145mm",height:"42mm"},
-    description:"Bold frame with slightly oversized fit. The all-rounder.",
+    description:"A heavy gauge trapezoidal frame constructed with wide temples to provide excellent optical stability and overall durability.",
     colors:[
       {name:"Matte Black",frame:0x1a1a1a,lens:0x333344,accent:0x444444,bg:["#08080a","#141418","#0c0c10"],particle:"#444"},
       {name:"Tortoise",frame:0x8b5e3c,lens:0x5a4530,accent:0xa0724a,bg:["#1a1008","#2a1d10","#1e140c"],particle:"#a0724a"},
@@ -117,7 +121,7 @@ const FRAMES = [
     ], build:buildWayfarer },
   { id:"round", name:"Round Wire", category:"Optical", basePrice:249, tagline:"Less is everything", labelParts:LABEL_PARTS,
     dimensions:{lens:"49mm",bridge:"20mm",temple:"135mm",height:"49mm"},
-    description:"Minimalist round frame. Adjustable nose pads, all-day comfort.",
+    description:"A symmetric circular aperture design that distributes structural tension evenly across the lens axis to maintain a lightweight profile.",
     colors:[
       {name:"Silver",frame:0xc0c0c0,lens:0x99bbdd,accent:0xe0e0e0,bg:["#0e1018","#181c28","#121620"],particle:"#c0c0c0"},
       {name:"Black",frame:0x222222,lens:0x445566,accent:0x555555,bg:["#0a0a0c","#141416","#0e0e12"],particle:"#555"},
@@ -125,7 +129,7 @@ const FRAMES = [
     ], build:buildRound },
   { id:"custom", name:"Eza's", category:"Custom", basePrice:449, tagline:"Your unique vision", labelParts:[],
     dimensions:{lens:"Custom",bridge:"Custom",temple:"Custom",height:"Custom"},
-    description:"Your hand-uploaded 3D design. Perfectly rendered, zero-compromise.",
+    description:"Utilizing a robust, classic trapezoidal architecture, Eza's is a signature model focused on maximized durability, comfort, and custom-mapped personalization.",
     url: "/models/glasses.glb",
     colors:[
       {name:"Original",frame:0xffffff,lens:0xffffff,accent:0xffffff,bg:["#0a0a0c","#141418","#0c0c10"],particle:"#fff"},
@@ -293,6 +297,7 @@ export default function GlassesViewer() {
   const [colorIdx, setColorIdx] = useState(0);
   const [sizeIdx, setSizeIdx] = useState(1);
   const [calibratedFaceWidth, setCalibratedFaceWidth] = useState(null);
+  const [isCheckingOut, setIsCheckingOut] = useState(false);
 
   const [menuOpen, setMenuOpen] = useState(false);
   const [page, setPage] = useState("configurator");
@@ -311,6 +316,33 @@ export default function GlassesViewer() {
   const size = SIZES[sizeIdx];
 
   const totalPrice = useMemo(() => frame.basePrice + material.price + lens.price, [frame, material, lens]);
+
+  const handleCheckout = async () => {
+    setIsCheckingOut(true);
+    try {
+      const response = await fetch("https://optiq.lloydthomas54321.workers.dev/create-checkout-session", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          name: `${frame.name} (${material.name}, ${lens.name})`,
+          description: frame.description,
+          price: totalPrice
+        })
+      });
+      const session = await response.json();
+      if (session.error) throw new Error(session.error.message || session.error);
+      
+      if (session.url) {
+        window.location.href = session.url;
+      } else {
+        throw new Error("No checkout URL returned from worker.");
+      }
+    } catch (err) {
+      console.error(err);
+      alert("Checkout error: " + err.message);
+      setIsCheckingOut(false);
+    }
+  };
 
   const frameThumbnails = useFrameThumbnails(FRAMES, MATERIALS[0].pbr);
 
@@ -1098,7 +1130,7 @@ const state = { isDragging: false, prevX: 0, prevY: 0, velX: 0, velY: 0, targetR
                 <span style={{ fontSize: 14, fontWeight: 500 }}>Total</span>
                 <span style={{ fontFamily: "'Playfair Display', serif", fontSize: 32, fontWeight: 600 }} className="gv-price-val"><span className="gv-currency">₱</span>{totalPrice.toLocaleString()}</span>
               </div>
-              <button className="gv-cta" style={{ width: "100%", padding: "18px 0", background: "rgba(255,255,255,0.92)", color: "#000", border: "none", borderRadius: 12, fontFamily: "'DM Sans', sans-serif", fontSize: 13, fontWeight: 600, letterSpacing: 2, textTransform: "uppercase", cursor: "pointer", transition: "all 0.4s cubic-bezier(0.23,1,0.32,1)" }}>Order Custom Pair</button>
+              <button className="gv-cta" style={{ width: "100%", padding: "18px 0", background: "rgba(255,255,255,0.92)", color: "#000", border: "none", borderRadius: 12, fontFamily: "'DM Sans', sans-serif", fontSize: 13, fontWeight: 600, letterSpacing: 2, textTransform: "uppercase", cursor: isCheckingOut ? "wait" : "pointer", transition: "all 0.4s cubic-bezier(0.23,1,0.32,1)", opacity: isCheckingOut ? 0.7 : 1 }} onClick={handleCheckout} disabled={isCheckingOut}>{isCheckingOut ? "Preparing Checkout..." : "Order Custom Pair"}</button>
             </>)}
           </div>
 

@@ -62,7 +62,7 @@ function CountUp({ target, duration = 2, prefix = "", suffix = "", decimals = 0,
 }
 
 /* ── AnimatedContent: scroll-triggered fade/slide ───────── */
-function AnimatedContent({ children, direction = "up", delay = 0, style = {} }) {
+function AnimatedContent({ children, direction = "up", delay = 0, className = "", style = {} }) {
   const yMap = { up: 40, down: -40 };
   const xMap = { left: 40, right: -40 };
   return (
@@ -75,6 +75,7 @@ function AnimatedContent({ children, direction = "up", delay = 0, style = {} }) 
       whileInView={{ opacity: 1, y: 0, x: 0 }}
       viewport={{ once: true, margin: "-60px" }}
       transition={{ duration: 0.7, delay, ease: [0.23, 1, 0.32, 1] }}
+      className={className}
       style={style}
     >
       {children}
@@ -97,16 +98,18 @@ export default function ImpactPage() {
     const s = document.createElement("style");
     s.id = id;
     s.textContent = `
+      * { box-sizing: border-box; }
       @keyframes gvGradientSweep { 0% { background-position: 0% 50% } 100% { background-position: 200% 50% } }
       @media (max-width: 480px) {
         .impact-cost-grid { grid-template-columns: 1fr !important; }
+        .impact-stats-grid { grid-template-columns: 1fr 1fr !important; }
       }
     `;
     document.head.appendChild(s);
   }, []);
 
   return (
-    <div style={{ width: "100%", maxWidth: 900, margin: "0 auto", padding: "0 24px 80px", textAlign: "left" }}>
+    <div style={{ width: "100%", maxWidth: 900, margin: "0 auto", padding: "0 24px 80px", textAlign: "left", boxSizing: "border-box", overflowX: "hidden" }}>
 
       {/* HERO */}
       <section style={{ paddingTop: 60, paddingBottom: 60, textAlign: "center" }}>
@@ -136,19 +139,20 @@ export default function ImpactPage() {
       </section>
 
       {/* STATS */}
-      <section style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(120px, 1fr))", gap: 16, marginBottom: 80 }}>
+      <section className="impact-stats-grid" style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(120px, 1fr))", gap: 16, marginBottom: 80 }}>
         {[
           { target: 82, suffix: "%", label: "Less CO2 vs virgin plastic", color: "#6fcf97" },
           { target: 12, suffix: " caps", label: "Recycled per pair", color: "#4ecdc4" },
           { target: 300, prefix: "₱", suffix: "", label: "Average pair cost", color: "#a8edea" },
           { target: 15, suffix: "g", label: "Plastic per frame", color: "#6fcf97" },
         ].map((stat, i) => (
-          <AnimatedContent key={i} delay={i * 0.1}>
+          <AnimatedContent key={i} delay={i * 0.1} style={{ display: "flex", height: "100%" }}>
             <div style={{
-              padding: "28px 20px", borderRadius: 16, textAlign: "center",
+              flex: 1, padding: "28px 16px", borderRadius: 16, textAlign: "center",
               background: "rgba(255,255,255,0.03)", border: "1px solid rgba(255,255,255,0.06)",
+              display: "flex", flexDirection: "column", justifyContent: "center"
             }}>
-              <p style={{ fontFamily: "'Playfair Display', serif", fontSize: 40, fontWeight: 600, margin: "0 0 4px", color: stat.color }}>
+              <p style={{ fontFamily: "'Playfair Display', serif", fontSize: "clamp(28px, 6vw, 40px)", fontWeight: 600, margin: "0 0 4px", color: stat.color }}>
                 <CountUp target={stat.target} prefix={stat.prefix || ""} suffix={stat.suffix} duration={2.5} />
               </p>
               <p style={{ fontSize: 11, opacity: 0.4, margin: 0, letterSpacing: 0.5 }}>{stat.label}</p>
@@ -200,9 +204,9 @@ export default function ImpactPage() {
         </AnimatedContent>
 
         <div className="impact-cost-grid" style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 16 }}>
-          <AnimatedContent direction="left" delay={0.1}>
+          <AnimatedContent direction="left" delay={0.1} style={{ display: "flex", height: "100%" }}>
             <div style={{
-              padding: "28px 24px", borderRadius: 16,
+              flex: 1, padding: "28px 24px", borderRadius: 16,
               background: "rgba(255,80,80,0.04)", border: "1px solid rgba(255,80,80,0.1)",
             }}>
               <p style={{ fontSize: 10, letterSpacing: 2, textTransform: "uppercase", opacity: 0.4, margin: "0 0 16px", fontWeight: 600, color: "#ff6b6b" }}>Traditional Eyewear</p>
@@ -221,9 +225,9 @@ export default function ImpactPage() {
             </div>
           </AnimatedContent>
 
-          <AnimatedContent direction="right" delay={0.2}>
+          <AnimatedContent direction="right" delay={0.2} style={{ display: "flex", height: "100%" }}>
             <div style={{
-              padding: "28px 24px", borderRadius: 16,
+              flex: 1, padding: "28px 24px", borderRadius: 16,
               background: "rgba(111,207,151,0.04)", border: "1px solid rgba(111,207,151,0.12)",
             }}>
               <p style={{ fontSize: 10, letterSpacing: 2, textTransform: "uppercase", opacity: 0.5, margin: "0 0 16px", fontWeight: 600, color: "#6fcf97" }}>OPTIQ (3D Printed)</p>
@@ -278,9 +282,9 @@ export default function ImpactPage() {
                   {step.icon}
                 </div>
                 <div style={{ flex: 1 }}>
-                  <div style={{ display: "flex", alignItems: "baseline", gap: 10, marginBottom: 4 }}>
+                  <div style={{ display: "flex", alignItems: "baseline", gap: 10, marginBottom: 4, flexWrap: "wrap" }}>
                     <span style={{ fontSize: 10, opacity: 0.25, fontFamily: "'JetBrains Mono', monospace", letterSpacing: 1 }}>{step.num}</span>
-                    <span style={{ fontSize: 16, fontWeight: 600 }}>{step.title}</span>
+                    <span style={{ fontSize: "clamp(14px, 4vw, 16px)", fontWeight: 600 }}>{step.title}</span>
                   </div>
                   <p style={{ fontSize: 13, lineHeight: 1.7, opacity: 0.4, margin: 0 }}>{step.desc}</p>
                 </div>
@@ -307,11 +311,11 @@ export default function ImpactPage() {
             { title: "Local Fabrication", desc: "3D printers deployed in community centres enable local production, reducing shipping costs and creating skilled jobs.", stat: "5", statLabel: "fabrication hubs planned" },
             { title: "Accessibility First", desc: "AI-powered face scanning removes the need for optician visits. Anyone with a smartphone can get properly fitted glasses.", stat: "0", statLabel: "optician visits needed" },
           ].map((card, i) => (
-            <AnimatedContent key={i} delay={i * 0.12}>
+            <AnimatedContent key={i} delay={i * 0.12} style={{ display: "flex", height: "100%" }}>
               <div style={{
-                padding: "24px", borderRadius: 16,
+                flex: 1, padding: "24px", borderRadius: 16,
                 background: "rgba(255,255,255,0.02)", border: "1px solid rgba(255,255,255,0.06)",
-                height: "100%",
+                display: "flex", flexDirection: "column"
               }}>
                 <p style={{ fontFamily: "'Playfair Display', serif", fontSize: 36, fontWeight: 600, margin: "0 0 2px", color: "#6fcf97" }}>
                   <CountUp target={parseInt(card.stat) || 0} suffix={card.stat.includes("+") ? "+" : ""} />
@@ -329,7 +333,7 @@ export default function ImpactPage() {
       <section style={{ textAlign: "center", paddingBottom: 40 }}>
         <AnimatedContent>
           <div style={{
-            padding: "48px 32px", borderRadius: 20,
+            padding: "48px 24px", borderRadius: 20,
             background: "rgba(111,207,151,0.03)", border: "1px solid rgba(111,207,151,0.08)",
           }}>
             <p style={{ fontSize: 11, letterSpacing: 3, textTransform: "uppercase", opacity: 0.3, marginBottom: 16, fontWeight: 600 }}>

@@ -47,6 +47,53 @@ export default {
       return new Response("Method not allowed", { status: 405 });
     }
 
+    const url = new URL(request.url);
+
+    if (url.pathname === "/create-checkout-session") {
+      let body;
+      try { body = await request.json(); } catch { return new Response("Invalid JSON", { status: 400 }); }
+
+      const { name, description, price } = body;
+      
+      let formParams = new URLSearchParams();
+      formParams.append('line_items[0][price_data][currency]', 'php');
+      formParams.append('line_items[0][price_data][product_data][name]', name || 'Custom OPTIQ Glasses');
+      
+      // Bring text back to the left side
+      // Using \u2800 (invisible Braille space) prevents Stripe from collapsing the newlines!
+      let fullDesc = description || '';
+      fullDesc += '\n\u2800\nShipping: 3-5 business days (Metro), 5-7 business days (Provincial).';
+      fullDesc += '\n\u2800\nReturn Policy: 3D printed on-demand and non-refundable.';
+      fullDesc += '\n\u2800\nThank you for making our planet a more sustainable place! 🌍';
+
+      formParams.append('line_items[0][price_data][product_data][description]', fullDesc.substring(0, 500));
+      
+      formParams.append('line_items[0][price_data][unit_amount]', Math.round(price * 100).toString());
+      formParams.append('line_items[0][quantity]', '1');
+      formParams.append('mode', 'payment');
+      
+      // Collect shipping address in the Philippines
+      formParams.append('shipping_address_collection[allowed_countries][0]', 'PH');
+
+      const origin = request.headers.get('Origin') || 'http://localhost:5173';
+      formParams.append('success_url', origin + '?success=true');
+      formParams.append('cancel_url', origin + '?canceled=true');
+
+      const stripeResponse = await fetch('https://api.stripe.com/v1/checkout/sessions', {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${env.STRIPE_SECRET_KEY}`,
+          'Content-Type': 'application/x-www-form-urlencoded',
+        },
+        body: formParams
+      });
+
+      const session = await stripeResponse.json();
+      if (!stripeResponse.ok) return new Response(JSON.stringify({ error: session.error }), { status: 400, headers: { "Access-Control-Allow-Origin": ALLOWED_ORIGIN } });
+
+      return new Response(JSON.stringify({ url: session.url }), { headers: { "Content-Type": "application/json", "Access-Control-Allow-Origin": ALLOWED_ORIGIN } });
+    }
+
     let body;
     try {
       body = await request.json();
