@@ -545,7 +545,8 @@ export default function GlassesViewer() {
       });
     }, 16);
     return () => clearInterval(id);
-  }, [exploded, step]);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [exploded]);
 
   /* ── label projection ── */
   useEffect(() => {
