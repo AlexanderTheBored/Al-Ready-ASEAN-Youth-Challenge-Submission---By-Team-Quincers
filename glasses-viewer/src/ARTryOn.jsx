@@ -861,19 +861,18 @@ export default function ARTryOn({ onBack, faceWidth, initialFrameId, initialColo
 
     initThreeJS(displayW, displayH);
     // Use refs so this callback doesn't depend on frameIdx/colorIdx state
-    await buildGlasses(frameIdxRef.current, colorIdxRef.current);
+    buildGlasses(frameIdxRef.current, colorIdxRef.current);
     prevFrameIdxRef.current = frameIdxRef.current;
     startLoop();
     setStatus("live");
   }, [initFaceLandmarker, startCamera, initThreeJS, buildGlasses, startLoop]);
 
   /* ── Mount: start once, cleanup on unmount ── */
-  useEffect(() => {
+    useEffect(() => {
     handleStart();
     return cleanup;
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
-
+  }, [handleStart, cleanup]);
+  
   /* ── capture photo ── */
   const handleCapture = useCallback(() => {
     const vCanvas = videoCanvasRef.current;
