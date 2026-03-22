@@ -121,7 +121,7 @@
   font-weight: 500;
   letter-spacing: 2px;
   text-transform: uppercase;
-  opacity: 0.3;
+  opacity: 0.5;
 }
 
 .menu__item-price {
@@ -130,7 +130,7 @@
   font-family: 'JetBrains Mono', monospace;
   font-size: 12px;
   font-weight: 400;
-  opacity: 0.35;
+  opacity: 0.55;
   letter-spacing: 0;
 }
 

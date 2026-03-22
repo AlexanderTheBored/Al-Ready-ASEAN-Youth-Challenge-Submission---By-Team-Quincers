@@ -117,7 +117,7 @@ export default function ColorPicker({ colors, colorIdx, onSelect, frameIsGLB, ma
                   }}>{c.name}</span>
                   {isHov && (
                     <span style={{
-                      fontSize: 9, opacity: 0.5, letterSpacing: 1.5,
+                      fontSize: 9, opacity: 0.7, letterSpacing: 1.5,
                       textTransform: "uppercase", color: "#fff",
                     }}>Select</span>
                   )}
@@ -153,13 +153,13 @@ export default function ColorPicker({ colors, colorIdx, onSelect, frameIsGLB, ma
                       }} />
                       <span style={{
                         fontSize: 10, fontFamily: "'JetBrains Mono', monospace",
-                        opacity: 0.45, color: "#fff", letterSpacing: 0.5,
+                        opacity: 0.65, color: "#fff", letterSpacing: 0.5,
                       }}>
                         {isOrig ? "original" : fHex.toUpperCase()}
                       </span>
                     </div>
                     <span style={{
-                      fontSize: 9, opacity: 0.4, letterSpacing: 1.5,
+                      fontSize: 9, opacity: 0.6, letterSpacing: 1.5,
                       textTransform: "uppercase", color: "#fff",
                     }}>
                       {isOrig ? "Design colours" : "No extra cost"}

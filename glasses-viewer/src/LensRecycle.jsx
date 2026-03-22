@@ -80,7 +80,7 @@ const inputBase = {
 
 const labelStyle = {
   display: "block", fontSize: 12, fontWeight: 500, letterSpacing: 0.5,
-  opacity: 0.6, marginBottom: 6,
+  opacity: 0.75, marginBottom: 6,
 };
 
 export default function LensRecycle() {
@@ -202,7 +202,7 @@ export default function LensRecycle() {
       {/* HERO */}
       <section style={{ paddingTop: 60, paddingBottom: 50, textAlign: "center" }}>
         <AnimatedContent>
-          <p style={{ fontSize: 11, letterSpacing: 3, textTransform: "uppercase", opacity: 0.35, marginBottom: 20, fontWeight: 600 }}>
+          <p style={{ fontSize: 11, letterSpacing: 3, textTransform: "uppercase", opacity: 0.55, marginBottom: 20, fontWeight: 600 }}>
             Lens Recycling Program
           </p>
         </AnimatedContent>
@@ -212,14 +212,14 @@ export default function LensRecycle() {
         </h1>
 
         <AnimatedContent delay={0.3}>
-          <p style={{ fontSize: 16, lineHeight: 1.8, opacity: 0.5, maxWidth: 600, margin: "0 auto 16px" }}>
+          <p style={{ fontSize: 16, lineHeight: 1.8, opacity: 0.7, maxWidth: 600, margin: "0 auto 16px" }}>
             Lenses are the most expensive part of any pair of glasses.
             Instead of throwing them away, <GradientText>give them a second life</GradientText>.
           </p>
         </AnimatedContent>
 
         <AnimatedContent delay={0.5}>
-          <p style={{ fontSize: 15, lineHeight: 1.8, opacity: 0.4, maxWidth: 580, margin: "0 auto" }}>
+          <p style={{ fontSize: 15, lineHeight: 1.8, opacity: 0.6, maxWidth: 580, margin: "0 auto" }}>
             Fill out the form below and our team will reach out with instructions on how to send in your old lenses for recycling or repurposing.
           </p>
         </AnimatedContent>
@@ -236,7 +236,7 @@ export default function LensRecycle() {
             }}>
               <span style={{ fontSize: 28 }}>{b.icon}</span>
               <p style={{ fontFamily: "'Playfair Display', serif", fontSize: 18, fontWeight: 500, margin: 0 }}>{b.title}</p>
-              <p style={{ fontSize: 13, lineHeight: 1.7, opacity: 0.4, margin: 0 }}>{b.desc}</p>
+              <p style={{ fontSize: 13, lineHeight: 1.7, opacity: 0.6, margin: 0 }}>{b.desc}</p>
             </div>
           </AnimatedContent>
         ))}
@@ -246,7 +246,7 @@ export default function LensRecycle() {
       <section>
         <AnimatedContent>
           <div style={{ textAlign: "center", marginBottom: 32 }}>
-            <p style={{ fontSize: 11, letterSpacing: 3, textTransform: "uppercase", opacity: 0.3, marginBottom: 12, fontWeight: 600 }}>
+            <p style={{ fontSize: 11, letterSpacing: 3, textTransform: "uppercase", opacity: 0.5, marginBottom: 12, fontWeight: 600 }}>
               Submit Your Lenses
             </p>
             <h2 style={{ fontFamily: "'Playfair Display', serif", fontSize: 30, fontWeight: 500, margin: 0, lineHeight: 1.2, color: "#fff" }}>
@@ -328,12 +328,12 @@ export default function LensRecycle() {
               <h3 style={{ fontFamily: "'Playfair Display', serif", fontSize: 26, fontWeight: 500, margin: "0 0 12px", color: "#fff" }}>
                 Submission Received!
               </h3>
-              <p style={{ fontSize: 15, lineHeight: 1.8, opacity: 0.5, margin: "0 0 8px" }}>
+              <p style={{ fontSize: 15, lineHeight: 1.8, opacity: 0.7, margin: "0 0 8px" }}>
                 Thank you, <strong style={{ opacity: 1 }}>{form.name}</strong>. We've received your recycling request
                 for <strong style={{ opacity: 1 }}>{form.pairs} pair{form.pairs > 1 ? "s" : ""}</strong> of lenses.
               </p>
-              <p style={{ fontSize: 14, lineHeight: 1.7, opacity: 0.4, margin: "0 0 28px" }}>
-                Our team will contact you at <strong style={{ opacity: 0.7 }}>{form.email}</strong> with
+              <p style={{ fontSize: 14, lineHeight: 1.7, opacity: 0.6, margin: "0 0 28px" }}>
+                Our team will contact you at <strong style={{ opacity: 0.85 }}>{form.email}</strong> with
                 instructions on how to send in your lenses.
               </p>
               <motion.button

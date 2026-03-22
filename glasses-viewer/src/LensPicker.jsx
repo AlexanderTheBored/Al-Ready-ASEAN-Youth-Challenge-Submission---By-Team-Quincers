@@ -378,8 +378,8 @@ export default function LensPicker({ lensTypes, lensIdx, onSelect, frameId }) {
           ].map((spec, si) => (
             <div key={si}>
               <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 5 }}>
-                <span style={{ fontSize: 9, opacity: 0.35, textTransform: "uppercase", letterSpacing: 1.3, fontWeight: 700 }}>{spec.label}</span>
-                <span style={{ fontSize: 10, fontFamily: "'JetBrains Mono', monospace", opacity: 0.5 }}>{spec.val}%</span>
+                <span style={{ fontSize: 9, opacity: 0.55, textTransform: "uppercase", letterSpacing: 1.3, fontWeight: 700 }}>{spec.label}</span>
+                <span style={{ fontSize: 10, fontFamily: "'JetBrains Mono', monospace", opacity: 0.7 }}>{spec.val}%</span>
               </div>
               <div style={{ height: 3, borderRadius: 2, background: "rgba(255,255,255,0.06)", overflow: "hidden" }}>
                 <div className="lp-bar-fill" style={{
@@ -403,10 +403,10 @@ export default function LensPicker({ lensTypes, lensIdx, onSelect, frameId }) {
         </div>
 
         <p style={{ margin: 0, fontSize: 11, lineHeight: 1.5 }}>
-          <span style={{ fontSize: 8, opacity: 0.3, fontWeight: 700, textTransform: "uppercase", letterSpacing: 1.5, marginRight: 7 }}>Best for</span>
-          <span style={{ opacity: 0.4 }}>{meta.use}</span>
+          <span style={{ fontSize: 8, opacity: 0.5, fontWeight: 700, textTransform: "uppercase", letterSpacing: 1.5, marginRight: 7 }}>Best for</span>
+          <span style={{ opacity: 0.6 }}>{meta.use}</span>
         </p>
-        <p style={{ margin: "6px 0 0", fontSize: 11, opacity: 0.28, lineHeight: 1.55 }}>{lt.desc}</p>
+        <p style={{ margin: "6px 0 0", fontSize: 11, opacity: 0.48, lineHeight: 1.55 }}>{lt.desc}</p>
       </div>
     </div>
   );

@@ -965,18 +965,18 @@ export default function GlassesViewer() {
               ↻ {isSpinning ? "Stop" : "Spin"}
             </button>
           </div>
-          <p style={{ textAlign: "center", fontSize: 10, opacity: 0.2, marginTop: 8, letterSpacing: 1 }}>
+          <p style={{ textAlign: "center", fontSize: 10, opacity: 0.4, marginTop: 8, letterSpacing: 1 }}>
             {isMobile ? "Drag to rotate · Pinch to zoom" : "Drag to rotate · Scroll to zoom"}
           </p>
 
           <div className="gv-price-ticker" style={{ marginTop: 20, padding: isSmall ? "12px 14px" : "16px 20px", borderRadius: 14, background: "rgba(255,255,255,0.04)", border: "1px solid rgba(255,255,255,0.06)", display: "flex", justifyContent: "space-between", alignItems: "center", gap: 12 }}>
             <div style={{ flex: 1, minWidth: 0 }}>
-              <p style={{ margin: 0, fontSize: 10, opacity: 0.35, letterSpacing: 1.5, textTransform: "uppercase", fontWeight: 600 }}>Your Build</p>
+              <p style={{ margin: 0, fontSize: 10, opacity: 0.55, letterSpacing: 1.5, textTransform: "uppercase", fontWeight: 600 }}>Your Build</p>
               <p style={{ margin: "4px 0 0", fontSize: isSmall ? 11 : 13, opacity: 0.6, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{frame.name} · {material.name} · {lens.name}</p>
             </div>
             <div style={{ textAlign: "right", flexShrink: 0 }}>
               <p style={{ margin: 0, fontFamily: "'Playfair Display', serif", fontSize: isSmall ? 22 : 28, fontWeight: 600 }} className="gv-price-val"><span className="gv-currency">₱</span>{totalPrice.toLocaleString()}</p>
-              <p style={{ margin: 0, fontSize: 10, opacity: 0.3 }}>estimated</p>
+              <p style={{ margin: 0, fontSize: 10, opacity: 0.5 }}>estimated</p>
             </div>
           </div>
         </div>
@@ -984,7 +984,7 @@ export default function GlassesViewer() {
         {/* CONFIGURATOR PANEL */}
         <div className="gv-panel-wrap" style={{ flex: "1 1 340px", minWidth: 0, maxWidth: "100%", display: "flex", flexDirection: "column", paddingTop: 4 }}>
           <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 20, animation: "gvFadeUp 0.4s ease both" }}>
-            <span style={{ fontSize: 10, opacity: 0.3, letterSpacing: 2, textTransform: "uppercase", fontWeight: 600 }}>Step {step + 1} of {STEPS.length}</span>
+            <span style={{ fontSize: 10, opacity: 0.5, letterSpacing: 2, textTransform: "uppercase", fontWeight: 600 }}>Step {step + 1} of {STEPS.length}</span>
             <div style={{ display: "flex", gap: 6 }}>
               {STEPS.map((_, i) => (
                 <button key={i} onClick={() => setStep(i)} style={{ width: i === step ? 20 : 8, height: 8, borderRadius: 4, background: i === step ? "rgba(255,255,255,0.8)" : i < step ? "rgba(255,255,255,0.3)" : "rgba(255,255,255,0.08)", border: "none", cursor: "pointer", transition: "all 0.4s cubic-bezier(0.23,1,0.32,1)", padding: 0 }} />
@@ -996,7 +996,7 @@ export default function GlassesViewer() {
 
             {step === 0 && (<>
               <h2 style={{ fontFamily: "'Playfair Display', serif", fontSize: isSmall ? 22 : 26, fontWeight: 500, margin: "0 0 6px" }}>Let's find your perfect fit</h2>
-              <p style={{ fontSize: 13, opacity: 0.4, margin: "0 0 24px", lineHeight: 1.6 }}>Our AI measures your face in seconds and recommends the ideal frame style and size. No optician needed.</p>
+              <p style={{ fontSize: 13, opacity: 0.6, margin: "0 0 24px", lineHeight: 1.6 }}>Our AI measures your face in seconds and recommends the ideal frame style and size. No optician needed.</p>
 
               {/* ── AI Face Scan CTA ── */}
               <button
@@ -1028,7 +1028,7 @@ export default function GlassesViewer() {
                 </div>
                 <div>
                   <span style={{ fontSize: 18, fontWeight: 600, color: "#fff", display: "block", marginBottom: 6 }}>Scan Your Face</span>
-                  <p style={{ margin: 0, fontSize: 12, opacity: 0.45, lineHeight: 1.5, color: "#fff", maxWidth: 280 }}>
+                  <p style={{ margin: 0, fontSize: 12, opacity: 0.65, lineHeight: 1.5, color: "#fff", maxWidth: 280 }}>
                     10-second AI scan using MediaPipe. Recommends the best frame shape and size for your face.
                   </p>
                 </div>
@@ -1057,7 +1057,7 @@ export default function GlassesViewer() {
                   }}>
                     <span style={{ fontSize: 18, display: "block", marginBottom: 6, opacity: 0.5 }}>{s.icon}</span>
                     <p style={{ margin: "0 0 4px", fontSize: 11, fontWeight: 600 }}>{s.title}</p>
-                    <p style={{ margin: 0, fontSize: 10, opacity: 0.35, lineHeight: 1.4 }}>{s.desc}</p>
+                    <p style={{ margin: 0, fontSize: 10, opacity: 0.55, lineHeight: 1.4 }}>{s.desc}</p>
                   </div>
                 ))}
               </div>
@@ -1065,7 +1065,7 @@ export default function GlassesViewer() {
               {/* Skip option */}
               <div style={{ display: "flex", alignItems: "center", gap: 12, marginBottom: 14 }}>
                 <div style={{ flex: 1, height: 1, background: "rgba(255,255,255,0.06)" }} />
-                <span style={{ fontSize: 10, opacity: 0.25, letterSpacing: 1.5, textTransform: "uppercase", fontWeight: 600, flexShrink: 0 }}>or</span>
+                <span style={{ fontSize: 10, opacity: 0.45, letterSpacing: 1.5, textTransform: "uppercase", fontWeight: 600, flexShrink: 0 }}>or</span>
                 <div style={{ flex: 1, height: 1, background: "rgba(255,255,255,0.06)" }} />
               </div>
               <button
@@ -1083,16 +1083,16 @@ export default function GlassesViewer() {
 
             {step === 1 && (<>
               <h2 style={{ fontFamily: "'Playfair Display', serif", fontSize: isSmall ? 22 : 26, fontWeight: 500, margin: "0 0 6px" }}>Choose your frame</h2>
-              <p style={{ fontSize: 13, opacity: 0.4, margin: "0 0 16px" }}>Each frame is 3D printed from recycled materials to your exact specs.</p>
+              <p style={{ fontSize: 13, opacity: 0.6, margin: "0 0 16px" }}>Each frame is 3D printed from recycled materials to your exact specs.</p>
               <div style={{ height: menuHeight, maxHeight: isSmall ? 320 : 460, position: "relative", borderRadius: 16, overflow: "hidden", border: "1px solid rgba(255,255,255,0.06)" }}>
                 <FlowingMenu items={flowingMenuItems} speed={18} textColor="rgba(255,255,255,0.85)" bgColor="rgba(255,255,255,0.02)" marqueeBgColor="rgba(255,255,255,0.95)" marqueeTextColor="#060010" borderColor="rgba(255,255,255,0.06)" selectedIndex={frameIdx} onItemClick={(i) => { setFrameIdx(i); setColorIdx(0); }} />
               </div>
-              <p style={{ fontSize: 10, opacity: 0.2, marginTop: 10, textAlign: "center", letterSpacing: 1.5, textTransform: "uppercase" }}>{isMobile ? "Tap to select" : "Hover to preview · Click to select"}</p>
+              <p style={{ fontSize: 10, opacity: 0.4, marginTop: 10, textAlign: "center", letterSpacing: 1.5, textTransform: "uppercase" }}>{isMobile ? "Tap to select" : "Hover to preview · Click to select"}</p>
             </>)}
 
             {step === 2 && (<>
               <h2 style={{ fontFamily: "'Playfair Display', serif", fontSize: isSmall ? 22 : 26, fontWeight: 500, margin: "0 0 6px" }}>Pick your material</h2>
-              <p style={{ fontSize: 13, opacity: 0.4, margin: "0 0 20px" }}>All materials are sourced from post-consumer waste. Zero virgin plastic.</p>
+              <p style={{ fontSize: 13, opacity: 0.6, margin: "0 0 20px" }}>All materials are sourced from post-consumer waste. Zero virgin plastic.</p>
               <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
                 {MATERIALS.map((mt, i) => (
                   <OptCard key={mt.id} selected={matIdx === i} onClick={() => setMatIdx(i)}>
@@ -1103,8 +1103,8 @@ export default function GlassesViewer() {
                           <span style={{ fontSize: isSmall ? 13 : 15, fontWeight: 500 }}>{mt.name}</span>
                           <span style={{ fontSize: 9, padding: "2px 8px", borderRadius: 4, background: "rgba(255,255,255,0.06)", border: "1px solid rgba(255,255,255,0.08)", letterSpacing: 1, textTransform: "uppercase", opacity: 0.5 }}>{mt.tag}</span>
                         </div>
-                        <p style={{ margin: "0 0 4px", fontSize: 12, opacity: 0.4, lineHeight: 1.5 }}>{mt.desc}</p>
-                        <p style={{ margin: 0, fontSize: 10, opacity: 0.3, color: "#6fcf97" }}>{mt.co2}</p>
+                        <p style={{ margin: "0 0 4px", fontSize: 12, opacity: 0.6, lineHeight: 1.5 }}>{mt.desc}</p>
+                        <p style={{ margin: 0, fontSize: 10, opacity: 0.5, color: "#6fcf97" }}>{mt.co2}</p>
                       </div>
                       <span style={{ fontSize: 14, opacity: 0.5, fontFamily: "'JetBrains Mono', monospace", whiteSpace: "nowrap", marginLeft: 12, flexShrink: 0 }} className="gv-price-val">{mt.price === 0 ? "included" : <><span className="gv-currency" style={{ fontSize: "0.9em", top: "-0.02em" }}>+₱</span>{mt.price}</>}</span>
                     </div>
@@ -1115,7 +1115,7 @@ export default function GlassesViewer() {
 
 {step === 3 && (<>
   <h2 style={{ fontFamily: "'Playfair Display', serif", fontSize: isSmall ? 22 : 26, fontWeight: 500, margin: "0 0 6px" }}>Select your lens</h2>
-  <p style={{ fontSize: 13, opacity: 0.4, margin: "0 0 14px" }}>All lenses are scratch-resistant polycarbonate with UV400 protection.</p>
+  <p style={{ fontSize: 13, opacity: 0.6, margin: "0 0 14px" }}>All lenses are scratch-resistant polycarbonate with UV400 protection.</p>
   <LensPicker
     lensTypes={LENS_TYPES}
     lensIdx={lensIdx}
@@ -1126,7 +1126,7 @@ export default function GlassesViewer() {
 
             {step === 4 && (<>
               <h2 style={{ fontFamily: "'Playfair Display', serif", fontSize: isSmall ? 22 : 26, fontWeight: 500, margin: "0 0 6px" }}>Choose your colour</h2>
-              <p style={{ fontSize: 13, opacity: 0.4, margin: "0 0 14px" }}>
+              <p style={{ fontSize: 13, opacity: 0.6, margin: "0 0 14px" }}>
                 {frame.url ? "Tints applied over the original design." : "Pigment mixed into the filament before printing."}
               </p>
               <ColorPicker
@@ -1141,7 +1141,7 @@ export default function GlassesViewer() {
             {/* STEP 5: SIZE */}
             {step === 5 && (<>
               <h2 style={{ fontFamily: "'Playfair Display', serif", fontSize: isSmall ? 22 : 26, fontWeight: 500, margin: "0 0 6px" }}>Select your size</h2>
-              <p style={{ fontSize: 13, opacity: 0.4, margin: "0 0 16px" }}>3D printing means every pair can be made to measure.</p>
+              <p style={{ fontSize: 13, opacity: 0.6, margin: "0 0 16px" }}>3D printing means every pair can be made to measure.</p>
 
               <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
                 {SIZES.map((sz, i) => (
@@ -1149,7 +1149,7 @@ export default function GlassesViewer() {
                     <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
                       <div>
                         <span style={{ fontSize: 15, fontWeight: 500 }}>{sz.name}</span>
-                        <p style={{ margin: "2px 0 0", fontSize: 12, opacity: 0.4 }}>{sz.fit} · Total width: {sz.width}</p>
+                        <p style={{ margin: "2px 0 0", fontSize: 12, opacity: 0.6 }}>{sz.fit} · Total width: {sz.width}</p>
                       </div>
                     </div>
                   </OptCard>
@@ -1186,7 +1186,7 @@ export default function GlassesViewer() {
                     { label: "Total Width", val: size.width },
                   ].map((d, i) => (
                     <div key={i} style={{ textAlign: "center", padding: "0 8px", borderLeft: i > 0 ? "1px solid rgba(255,255,255,0.04)" : "none" }}>
-                      <p style={{ margin: 0, fontSize: 9, opacity: 0.3, letterSpacing: 1.2, textTransform: "uppercase", fontWeight: 600 }}>{d.label}</p>
+                      <p style={{ margin: 0, fontSize: 9, opacity: 0.5, letterSpacing: 1.2, textTransform: "uppercase", fontWeight: 600 }}>{d.label}</p>
                       <p style={{ margin: "3px 0 0", fontSize: 13, fontWeight: 600, fontFamily: "'JetBrains Mono', monospace" }}>{d.val}</p>
                     </div>
                   ))}
@@ -1197,18 +1197,18 @@ export default function GlassesViewer() {
             {/* STEP 6: SUMMARY — with AR Try-On CTA */}
             {step === 6 && (<>
               <h2 style={{ fontFamily: "'Playfair Display', serif", fontSize: isSmall ? 22 : 26, fontWeight: 500, margin: "0 0 6px" }}>Your custom pair</h2>
-              <p style={{ fontSize: 13, opacity: 0.4, margin: "0 0 16px" }}>Review your configuration before ordering.</p>
+              <p style={{ fontSize: 13, opacity: 0.6, margin: "0 0 16px" }}>Review your configuration before ordering.</p>
 
               {/* ── Compact build summary ── */}
               <div style={{ display: "grid", gridTemplateColumns: "auto 1fr auto", gap: "6px 14px", padding: "14px 18px", borderRadius: 14, background: "rgba(255,255,255,0.03)", border: "1px solid rgba(255,255,255,0.06)", marginBottom: 14, alignItems: "baseline" }}>
                 {[
-                  ["Frame", <>{frame.name} <span style={{ opacity: 0.35, fontSize: 11 }}>{color.name}</span></>, <span className="gv-price-val" style={{ fontFamily: "'JetBrains Mono', monospace", opacity: 0.5, fontSize: 11 }}><span className="gv-currency" style={{ fontSize: "0.85em" }}>₱</span>{frame.basePrice.toLocaleString()}</span>],
-                  ["Material", <>{material.name} <span style={{ opacity: 0.35, fontSize: 11 }}>{material.tag}</span></>, <span style={{ fontFamily: "'JetBrains Mono', monospace", opacity: 0.5, fontSize: 11 }}>{material.price === 0 ? "incl." : `+₱${material.price}`}</span>],
-                  ["Lens", <>{lens.name}</>, <span style={{ fontFamily: "'JetBrains Mono', monospace", opacity: 0.5, fontSize: 11 }}>{lens.price === 0 ? "incl." : `+₱${lens.price}`}</span>],
-                  ["Size", <>{size.name} <span style={{ opacity: 0.35, fontSize: 11 }}>{size.width}</span></>, <span style={{ fontFamily: "'JetBrains Mono', monospace", opacity: 0.5, fontSize: 11 }}>incl.</span>],
+                  ["Frame", <>{frame.name} <span style={{ opacity: 0.55, fontSize: 11 }}>{color.name}</span></>, <span className="gv-price-val" style={{ fontFamily: "'JetBrains Mono', monospace", opacity: 0.7, fontSize: 11 }}><span className="gv-currency" style={{ fontSize: "0.85em" }}>₱</span>{frame.basePrice.toLocaleString()}</span>],
+                  ["Material", <>{material.name} <span style={{ opacity: 0.55, fontSize: 11 }}>{material.tag}</span></>, <span style={{ fontFamily: "'JetBrains Mono', monospace", opacity: 0.7, fontSize: 11 }}>{material.price === 0 ? "incl." : `+₱${material.price}`}</span>],
+                  ["Lens", <>{lens.name}</>, <span style={{ fontFamily: "'JetBrains Mono', monospace", opacity: 0.7, fontSize: 11 }}>{lens.price === 0 ? "incl." : `+₱${lens.price}`}</span>],
+                  ["Size", <>{size.name} <span style={{ opacity: 0.55, fontSize: 11 }}>{size.width}</span></>, <span style={{ fontFamily: "'JetBrains Mono', monospace", opacity: 0.7, fontSize: 11 }}>incl.</span>],
                 ].map(([label, value, price], i) => (
                   <div key={i} style={{ display: "contents" }}>
-                    <span style={{ fontSize: 10, opacity: 0.3, letterSpacing: 1.2, textTransform: "uppercase", fontWeight: 600, whiteSpace: "nowrap", paddingTop: 1 }}>{label}</span>
+                    <span style={{ fontSize: 10, opacity: 0.5, letterSpacing: 1.2, textTransform: "uppercase", fontWeight: 600, whiteSpace: "nowrap", paddingTop: 1 }}>{label}</span>
                     <span style={{ fontSize: 13, fontWeight: 500 }}>{value}</span>
                     <span style={{ textAlign: "right", whiteSpace: "nowrap" }}>{price}</span>
                   </div>
@@ -1219,10 +1219,10 @@ export default function GlassesViewer() {
               <div style={{ display: "flex", gap: 10, marginBottom: 16 }}>
                 <div style={{ flex: 1, padding: "12px 14px", borderRadius: 12, background: "rgba(111,207,151,0.05)", border: "1px solid rgba(111,207,151,0.12)" }}>
                   <p style={{ margin: 0, fontSize: 10, fontWeight: 600, color: "#6fcf97", letterSpacing: 1, textTransform: "uppercase", marginBottom: 4 }}>Impact</p>
-                  <p style={{ margin: 0, fontSize: 11, opacity: 0.45, lineHeight: 1.5 }}>~15g recycled plastic, 12 bottle caps diverted. {material.co2}.</p>
+                  <p style={{ margin: 0, fontSize: 11, opacity: 0.65, lineHeight: 1.5 }}>~15g recycled plastic, 12 bottle caps diverted. {material.co2}.</p>
                 </div>
                 <div style={{ flexShrink: 0, padding: "12px 20px", borderRadius: 12, background: "rgba(255,255,255,0.06)", display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center" }}>
-                  <p style={{ margin: 0, fontSize: 10, opacity: 0.3 }}>Total</p>
+                  <p style={{ margin: 0, fontSize: 10, opacity: 0.5 }}>Total</p>
                   <p style={{ margin: 0, fontFamily: "'Playfair Display', serif", fontSize: isSmall ? 24 : 28, fontWeight: 600 }} className="gv-price-val"><span className="gv-currency">₱</span>{totalPrice.toLocaleString()}</p>
                 </div>
               </div>
@@ -1268,7 +1268,7 @@ export default function GlassesViewer() {
                       color: "#4ecdc4", fontWeight: 700, letterSpacing: 1.5, textTransform: "uppercase",
                     }}>Live</span>
                   </div>
-                  <p style={{ margin: 0, fontSize: 11, opacity: 0.4, color: "#fff" }}>
+                  <p style={{ margin: 0, fontSize: 11, opacity: 0.6, color: "#fff" }}>
                     See how they look on your face before you buy
                   </p>
                 </div>
@@ -1297,7 +1297,7 @@ export default function GlassesViewer() {
       {page === "scanner" && (<div style={{ position: "relative", zIndex: 2, flex: 1, width: "100%" }}><FitScanner onApplyFit={({ frameIdx: fIdx, sizeIdx: sIdx, faceWidth }) => { skipAnimRef.current = true; setFrameIdx(fIdx); setColorIdx(0); setSizeIdx(sIdx); setCalibratedFaceWidth(faceWidth); setStep(scanReturnStep != null ? scanReturnStep : 1); setScanReturnStep(null); setPage("configurator"); window.scrollTo({ top: 0, behavior: "smooth" }); }} /></div>)}
       {page === "ar" && (<div style={{ position: "relative", zIndex: 2, flex: 1, width: "100%" }}><ARTryOn faceWidth={calibratedFaceWidth} initialFrameId={frame.id} initialColorIdx={colorIdx} onBack={() => { setPage("configurator"); setStep(6); window.scrollTo({ top: 0, behavior: "smooth" }); }} /></div>)}
 
-      <footer style={{ padding: isSmall ? "16px 12px" : 20, textAlign: "center", fontSize: 10, letterSpacing: 3, opacity: 0.2, textTransform: "uppercase", display: "flex", gap: isSmall ? 8 : 16, justifyContent: "center", flexWrap: "wrap", borderTop: "1px solid rgba(255,255,255,0.03)", marginTop: "auto", position: "relative", zIndex: 2 }}>
+      <footer style={{ padding: isSmall ? "16px 12px" : 20, textAlign: "center", fontSize: 10, letterSpacing: 3, opacity: 0.4, textTransform: "uppercase", display: "flex", gap: isSmall ? 8 : 16, justifyContent: "center", flexWrap: "wrap", borderTop: "1px solid rgba(255,255,255,0.03)", marginTop: "auto", position: "relative", zIndex: 2 }}>
         <span>OPTIQ © 2026</span><span>·</span><span>Recycled eyewear, 3D printed for you</span>
       </footer>
     </div>

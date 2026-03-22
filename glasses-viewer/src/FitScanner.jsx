@@ -503,13 +503,13 @@ export default function FitScanner({ onApplyFit }) {
 
       {/* HEADER */}
       <section style={{ paddingTop: 48, paddingBottom: 32, textAlign: "center" }}>
-        <p style={{ fontSize: 11, letterSpacing: 3, textTransform: "uppercase", opacity: 0.3, marginBottom: 12, fontWeight: 600 }}>
+        <p style={{ fontSize: 11, letterSpacing: 3, textTransform: "uppercase", opacity: 0.5, marginBottom: 12, fontWeight: 600 }}>
           AI-Powered
         </p>
         <h1 style={{ fontFamily: "'Playfair Display', serif", fontSize: "clamp(28px, 4vw, 42px)", fontWeight: 500, margin: "0 0 12px", lineHeight: 1.2 }}>
           Face Fit Scanner
         </h1>
-        <p style={{ fontSize: 14, opacity: 0.4, maxWidth: 480, margin: "0 auto" }}>
+        <p style={{ fontSize: 14, opacity: 0.6, maxWidth: 480, margin: "0 auto" }}>
           Our AI measures your face in real-time using MediaPipe Iris detection to recommend the perfect frame size and style. No optician visit needed.
         </p>
 
@@ -535,11 +535,11 @@ export default function FitScanner({ onApplyFit }) {
             maxWidth: 320, margin: "16px auto 0", textAlign: "left"
           }}>
             <p style={{ fontSize: 12, fontWeight: 600, margin: "0 0 8px", color: "#6fcf97" }}>Pinpoint Accuracy</p>
-            <p style={{ fontSize: 11, opacity: 0.4, lineHeight: 1.5, margin: "0 0 12px" }}>
+            <p style={{ fontSize: 11, opacity: 0.6, lineHeight: 1.5, margin: "0 0 12px" }}>
               By default, we use <strong>Iris Auto-Calibration</strong> (11.7mm reference). If you know your exact Pupillary Distance (IPD), enter it below.
             </p>
             <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
-              <label style={{ fontSize: 10, textTransform: "uppercase", letterSpacing: 1, opacity: 0.4 }}>Manual IPD (mm)</label>
+              <label style={{ fontSize: 10, textTransform: "uppercase", letterSpacing: 1, opacity: 0.6 }}>Manual IPD (mm)</label>
               <input 
                 type="number" 
                 placeholder="e.g. 63"
@@ -551,7 +551,7 @@ export default function FitScanner({ onApplyFit }) {
                   outline: "none", width: "100%", boxSizing: "border-box"
                 }}
               />
-              <p style={{ fontSize: 9, opacity: 0.3, margin: "4px 0 0" }}>Leave blank for Iris Auto-Mode</p>
+              <p style={{ fontSize: 9, opacity: 0.5, margin: "4px 0 0" }}>Leave blank for Iris Auto-Mode</p>
             </div>
           </div>
         )}
@@ -583,7 +583,7 @@ export default function FitScanner({ onApplyFit }) {
             <div style={{ width: 80, height: 80, borderRadius: "50%", border: "2px solid rgba(111,207,151,0.3)", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 32 }}>
               ◎
             </div>
-            <p style={{ fontSize: 14, opacity: 0.5, textAlign: "center" }}>Position your face in front of the camera</p>
+            <p style={{ fontSize: 14, opacity: 0.7, textAlign: "center" }}>Position your face in front of the camera</p>
             <button onClick={handleStart} style={{
               padding: "14px 36px", borderRadius: 10, border: "none", cursor: "pointer",
               background: "rgba(111,207,151,0.9)", color: "#000",
@@ -599,7 +599,7 @@ export default function FitScanner({ onApplyFit }) {
         {status === "loading" && (
           <div style={{ position: "absolute", inset: 0, display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", gap: 12 }}>
             <div style={{ width: 32, height: 32, border: "2px solid rgba(111,207,151,0.3)", borderTopColor: "#6fcf97", borderRadius: "50%", animation: "gvSpin 0.8s linear infinite" }} />
-            <p style={{ fontSize: 13, opacity: 0.5 }}>Loading AI model & camera...</p>
+            <p style={{ fontSize: 13, opacity: 0.7 }}>Loading AI model & camera...</p>
           </div>
         )}
 
@@ -649,7 +649,7 @@ export default function FitScanner({ onApplyFit }) {
                 ].map((item, i) => (
                   <div key={i} style={{ display: "flex", alignItems: "center", gap: 8 }}>
                     <span style={{ fontSize: 10, color: "#6fcf97", opacity: 0.8 }}>✓</span>
-                    <span style={{ fontSize: 11, opacity: 0.45 }}>{item}</span>
+                    <span style={{ fontSize: 11, opacity: 0.65 }}>{item}</span>
                   </div>
                 ))}
               </div>
@@ -677,7 +677,7 @@ export default function FitScanner({ onApplyFit }) {
                   onChange={(e) => setConfirmed(e.target.checked)}
                   style={{ display: "none" }}
                 />
-                <span style={{ fontSize: 12, fontWeight: 500, opacity: confirmed ? 0.9 : 0.5 }}>
+                <span style={{ fontSize: 12, fontWeight: 500, opacity: confirmed ? 0.9 : 0.7 }}>
                   I'm in a well-lit area and ready to scan
                 </span>
               </label>
@@ -721,8 +721,8 @@ export default function FitScanner({ onApplyFit }) {
         {status === "scanning" && (
           <div style={{ position: "absolute", bottom: 16, left: 16, right: 16 }}>
             <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 6 }}>
-              <span style={{ fontSize: 10, letterSpacing: 1.5, textTransform: "uppercase", opacity: 0.5, fontWeight: 600 }}>Analyzing face</span>
-              <span style={{ fontSize: 10, fontFamily: "'JetBrains Mono', monospace", opacity: 0.5 }}>{Math.round(scanProgress * 100)}%</span>
+              <span style={{ fontSize: 10, letterSpacing: 1.5, textTransform: "uppercase", opacity: 0.7, fontWeight: 600 }}>Analyzing face</span>
+              <span style={{ fontSize: 10, fontFamily: "'JetBrains Mono', monospace", opacity: 0.7 }}>{Math.round(scanProgress * 100)}%</span>
             </div>
             <div style={{ height: 3, borderRadius: 2, background: "rgba(255,255,255,0.08)" }}>
               <div style={{ height: "100%", borderRadius: 2, background: "#6fcf97", width: `${scanProgress * 100}%`, transition: "width 0.3s ease" }} />
@@ -755,7 +755,7 @@ export default function FitScanner({ onApplyFit }) {
                 padding: "14px 12px", borderRadius: 12, textAlign: "center",
                 background: "rgba(255,255,255,0.03)", border: "1px solid rgba(255,255,255,0.06)",
               }}>
-                <p style={{ fontSize: 9, letterSpacing: 1.5, textTransform: "uppercase", opacity: 0.35, margin: "0 0 6px", fontWeight: 600 }}>{m.label}</p>
+                <p style={{ fontSize: 9, letterSpacing: 1.5, textTransform: "uppercase", opacity: 0.55, margin: "0 0 6px", fontWeight: 600 }}>{m.label}</p>
                 <p style={{ fontSize: 18, fontWeight: 600, margin: 0, fontFamily: "'Playfair Display', serif", color: m.color }}>{m.value}</p>
               </div>
             ))}
@@ -767,7 +767,7 @@ export default function FitScanner({ onApplyFit }) {
             background: "rgba(111,207,151,0.04)", border: "1px solid rgba(111,207,151,0.12)",
             marginBottom: 16,
           }}>
-            <p style={{ fontSize: 10, letterSpacing: 2, textTransform: "uppercase", opacity: 0.4, margin: "0 0 12px", fontWeight: 600, color: "#6fcf97" }}>
+            <p style={{ fontSize: 10, letterSpacing: 2, textTransform: "uppercase", opacity: 0.6, margin: "0 0 12px", fontWeight: 600, color: "#6fcf97" }}>
               AI Recommendation
             </p>
             <div style={{ display: "flex", gap: 20, alignItems: "flex-start", flexWrap: "wrap" }}>
@@ -775,20 +775,20 @@ export default function FitScanner({ onApplyFit }) {
                 <p style={{ fontSize: 20, fontWeight: 600, margin: "0 0 4px", fontFamily: "'Playfair Display', serif" }}>
                   {recommendation.frameName}
                 </p>
-                <p style={{ fontSize: 13, opacity: 0.5, margin: "0 0 12px" }}>
+                <p style={{ fontSize: 13, opacity: 0.7, margin: "0 0 12px" }}>
                   Size: <strong style={{ opacity: 1 }}>{recommendation.size}</strong>
                 </p>
-                <p style={{ fontSize: 13, lineHeight: 1.7, opacity: 0.45, margin: 0 }}>
+                <p style={{ fontSize: 13, lineHeight: 1.7, opacity: 0.65, margin: 0 }}>
                   {recommendation.reason}
                 </p>
               </div>
               <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
                 <div style={{ padding: "10px 16px", borderRadius: 10, background: "rgba(255,255,255,0.04)", border: "1px solid rgba(255,255,255,0.06)", textAlign: "center" }}>
-                  <p style={{ fontSize: 9, opacity: 0.3, margin: "0 0 2px", letterSpacing: 1, textTransform: "uppercase" }}>Face shape</p>
+                  <p style={{ fontSize: 9, opacity: 0.5, margin: "0 0 2px", letterSpacing: 1, textTransform: "uppercase" }}>Face shape</p>
                   <p style={{ fontSize: 14, fontWeight: 600, margin: 0, textTransform: "capitalize" }}>{measurements.faceShape}</p>
                 </div>
                 <div style={{ padding: "10px 16px", borderRadius: 10, background: "rgba(255,255,255,0.04)", border: "1px solid rgba(255,255,255,0.06)", textAlign: "center" }}>
-                  <p style={{ fontSize: 9, opacity: 0.3, margin: "0 0 2px", letterSpacing: 1, textTransform: "uppercase" }}>W/H Ratio</p>
+                  <p style={{ fontSize: 9, opacity: 0.5, margin: "0 0 2px", letterSpacing: 1, textTransform: "uppercase" }}>W/H Ratio</p>
                   <p style={{ fontSize: 14, fontWeight: 600, margin: 0, fontFamily: "'JetBrains Mono', monospace" }}>{measurements.ratio}</p>
                 </div>
               </div>
@@ -824,7 +824,7 @@ export default function FitScanner({ onApplyFit }) {
 
           {/* how it works footer */}
           <div style={{ marginTop: 32, padding: "20px 24px", borderRadius: 14, background: "rgba(255,255,255,0.02)", border: "1px solid rgba(255,255,255,0.04)" }}>
-            <p style={{ fontSize: 10, letterSpacing: 2, textTransform: "uppercase", opacity: 0.25, margin: "0 0 10px", fontWeight: 600 }}>How This Works</p>
+            <p style={{ fontSize: 10, letterSpacing: 2, textTransform: "uppercase", opacity: 0.45, margin: "0 0 10px", fontWeight: 600 }}>How This Works</p>
             <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: 16 }}>
               {[
                 { step: "01", title: "Detect", desc: "MediaPipe Face Mesh identifies 468 facial landmarks in real-time" },
@@ -832,9 +832,9 @@ export default function FitScanner({ onApplyFit }) {
                 { step: "03", title: "Recommend", desc: "AI matches your measurements to the best frame size and style" },
               ].map((s, i) => (
                 <div key={i}>
-                  <p style={{ fontSize: 9, opacity: 0.2, fontFamily: "'JetBrains Mono', monospace", margin: "0 0 4px" }}>{s.step}</p>
+                  <p style={{ fontSize: 9, opacity: 0.4, fontFamily: "'JetBrains Mono', monospace", margin: "0 0 4px" }}>{s.step}</p>
                   <p style={{ fontSize: 12, fontWeight: 600, margin: "0 0 4px" }}>{s.title}</p>
-                  <p style={{ fontSize: 11, opacity: 0.35, margin: 0, lineHeight: 1.5 }}>{s.desc}</p>
+                  <p style={{ fontSize: 11, opacity: 0.55, margin: 0, lineHeight: 1.5 }}>{s.desc}</p>
                 </div>
               ))}
             </div>

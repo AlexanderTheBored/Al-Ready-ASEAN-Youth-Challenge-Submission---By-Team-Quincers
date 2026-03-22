@@ -114,7 +114,7 @@ export default function ImpactPage() {
       {/* HERO */}
       <section style={{ paddingTop: 60, paddingBottom: 60, textAlign: "center" }}>
         <AnimatedContent>
-          <p style={{ fontSize: 11, letterSpacing: 3, textTransform: "uppercase", opacity: 0.35, marginBottom: 20, fontWeight: 600 }}>
+          <p style={{ fontSize: 11, letterSpacing: 3, textTransform: "uppercase", opacity: 0.55, marginBottom: 20, fontWeight: 600 }}>
             Our Mission
           </p>
         </AnimatedContent>
@@ -124,14 +124,14 @@ export default function ImpactPage() {
         </h1>
 
         <AnimatedContent delay={0.3}>
-          <p style={{ fontSize: 16, lineHeight: 1.8, opacity: 0.5, maxWidth: 600, margin: "0 auto 16px" }}>
+          <p style={{ fontSize: 16, lineHeight: 1.8, opacity: 0.7, maxWidth: 600, margin: "0 auto 16px" }}>
             OPTIQ turns post-consumer plastic into custom eyewear using 3D printing.
             But glasses are just the beginning.
           </p>
         </AnimatedContent>
 
         <AnimatedContent delay={0.5}>
-          <p style={{ fontSize: 15, lineHeight: 1.8, opacity: 0.4, maxWidth: 580, margin: "0 auto" }}>
+          <p style={{ fontSize: 15, lineHeight: 1.8, opacity: 0.6, maxWidth: 580, margin: "0 auto" }}>
             We believe access to prosthetics and assistive devices shouldn't depend on your income.
             By proving that <GradientText>recycled materials + digital fabrication</GradientText> can produce reliable, comfortable eyewear at a fraction of the cost, we're building the foundation for affordable prosthetics for all.
           </p>
@@ -155,7 +155,7 @@ export default function ImpactPage() {
               <p style={{ fontFamily: "'Playfair Display', serif", fontSize: "clamp(28px, 6vw, 40px)", fontWeight: 600, margin: "0 0 4px", color: stat.color }}>
                 <CountUp target={stat.target} prefix={stat.prefix || ""} suffix={stat.suffix} duration={2.5} />
               </p>
-              <p style={{ fontSize: 11, opacity: 0.4, margin: 0, letterSpacing: 0.5 }}>{stat.label}</p>
+              <p style={{ fontSize: 11, opacity: 0.6, margin: 0, letterSpacing: 0.5 }}>{stat.label}</p>
             </div>
           </AnimatedContent>
         ))}
@@ -164,7 +164,7 @@ export default function ImpactPage() {
       {/* THE BIGGER PICTURE */}
       <section style={{ marginBottom: 80, textAlign: "center" }}>
         <AnimatedContent>
-          <p style={{ fontSize: 11, letterSpacing: 3, textTransform: "uppercase", opacity: 0.3, marginBottom: 12, fontWeight: 600 }}>
+          <p style={{ fontSize: 11, letterSpacing: 3, textTransform: "uppercase", opacity: 0.5, marginBottom: 12, fontWeight: 600 }}>
             The Bigger Picture
           </p>
           <h2 style={{ fontFamily: "'Playfair Display', serif", fontSize: 30, fontWeight: 500, margin: "0 0 20px", lineHeight: 1.2 }}>
@@ -174,19 +174,19 @@ export default function ImpactPage() {
         </AnimatedContent>
 
         <AnimatedContent delay={0.15}>
-          <p style={{ fontSize: 15, lineHeight: 1.9, opacity: 0.45, maxWidth: 650, margin: "0 auto 16px" }}>
+          <p style={{ fontSize: 15, lineHeight: 1.9, opacity: 0.65, maxWidth: 650, margin: "0 auto 16px" }}>
             2.7 billion people worldwide need glasses but can't access or afford them. In Southeast Asia alone, millions of students struggle in school because of uncorrected vision. Traditional eyewear supply chains are expensive, slow, and designed for wealthy markets.
           </p>
         </AnimatedContent>
 
         <AnimatedContent delay={0.2}>
-          <p style={{ fontSize: 15, lineHeight: 1.9, opacity: 0.45, maxWidth: 650, margin: "0 auto 16px" }}>
+          <p style={{ fontSize: 15, lineHeight: 1.9, opacity: 0.65, maxWidth: 650, margin: "0 auto 16px" }}>
             OPTIQ's approach changes that equation entirely. By 3D printing from recycled plastic, we eliminate traditional manufacturing overhead, reduce cost by over 80%, and produce on-demand with zero waste. Every pair is custom-fitted.
           </p>
         </AnimatedContent>
 
         <AnimatedContent delay={0.25}>
-          <p style={{ fontSize: 15, lineHeight: 1.9, opacity: 0.45, maxWidth: 650, margin: "0 auto" }}>
+          <p style={{ fontSize: 15, lineHeight: 1.9, opacity: 0.65, maxWidth: 650, margin: "0 auto" }}>
             The same technology, materials, and supply chain we're building for eyewear scales directly into prosthetic limbs, hearing aids, orthotics, and other assistive devices. Team Quincers and OPTIQ are committed to making reliable support affordable for everyone who needs it.
           </p>
         </AnimatedContent>
@@ -195,7 +195,7 @@ export default function ImpactPage() {
       {/* COST COMPARISON */}
       <section style={{ marginBottom: 80, textAlign: "left" }}>
         <AnimatedContent>
-          <p style={{ fontSize: 11, letterSpacing: 3, textTransform: "uppercase", opacity: 0.3, marginBottom: 12, fontWeight: 600 }}>
+          <p style={{ fontSize: 11, letterSpacing: 3, textTransform: "uppercase", opacity: 0.5, marginBottom: 12, fontWeight: 600 }}>
             Cost Breakdown
           </p>
           <h2 style={{ fontFamily: "'Playfair Display', serif", fontSize: 26, fontWeight: 500, margin: "0 0 24px" }}>
@@ -209,7 +209,7 @@ export default function ImpactPage() {
               flex: 1, padding: "28px 24px", borderRadius: 16,
               background: "rgba(255,80,80,0.04)", border: "1px solid rgba(255,80,80,0.1)",
             }}>
-              <p style={{ fontSize: 10, letterSpacing: 2, textTransform: "uppercase", opacity: 0.4, margin: "0 0 16px", fontWeight: 600, color: "#ff6b6b" }}>Traditional Eyewear</p>
+              <p style={{ fontSize: 10, letterSpacing: 2, textTransform: "uppercase", opacity: 0.6, margin: "0 0 16px", fontWeight: 600, color: "#ff6b6b" }}>Traditional Eyewear</p>
               {[
                 ["Frame manufacturing", "₱800"],
                 ["Lens grinding", "₱500"],
@@ -230,7 +230,7 @@ export default function ImpactPage() {
               flex: 1, padding: "28px 24px", borderRadius: 16,
               background: "rgba(111,207,151,0.04)", border: "1px solid rgba(111,207,151,0.12)",
             }}>
-              <p style={{ fontSize: 10, letterSpacing: 2, textTransform: "uppercase", opacity: 0.5, margin: "0 0 16px", fontWeight: 600, color: "#6fcf97" }}>OPTIQ (3D Printed)</p>
+              <p style={{ fontSize: 10, letterSpacing: 2, textTransform: "uppercase", opacity: 0.7, margin: "0 0 16px", fontWeight: 600, color: "#6fcf97" }}>OPTIQ (3D Printed)</p>
               {[
                 ["Recycled filament", "₱25"],
                 ["3D print time", "₱100"],
@@ -248,7 +248,7 @@ export default function ImpactPage() {
         </div>
 
         <AnimatedContent delay={0.35}>
-          <p style={{ fontSize: 13, opacity: 0.3, marginTop: 16, textAlign: "center" }}>
+          <p style={{ fontSize: 13, opacity: 0.5, marginTop: 16, textAlign: "center" }}>
             Up to 85% cost reduction. No middlemen, no retail markup, no waste.
           </p>
         </AnimatedContent>
@@ -257,7 +257,7 @@ export default function ImpactPage() {
       {/* PROCESS TIMELINE */}
       <section style={{ marginBottom: 80, textAlign: "left" }}>
         <AnimatedContent>
-          <p style={{ fontSize: 11, letterSpacing: 3, textTransform: "uppercase", opacity: 0.3, marginBottom: 12, fontWeight: 600 }}>
+          <p style={{ fontSize: 11, letterSpacing: 3, textTransform: "uppercase", opacity: 0.5, marginBottom: 12, fontWeight: 600 }}>
             From Waste to Wear
           </p>
           <h2 style={{ fontFamily: "'Playfair Display', serif", fontSize: 26, fontWeight: 500, margin: "0 0 32px" }}>
@@ -286,7 +286,7 @@ export default function ImpactPage() {
                     <span style={{ fontSize: 10, opacity: 0.25, fontFamily: "'JetBrains Mono', monospace", letterSpacing: 1 }}>{step.num}</span>
                     <span style={{ fontSize: "clamp(14px, 4vw, 16px)", fontWeight: 600 }}>{step.title}</span>
                   </div>
-                  <p style={{ fontSize: 13, lineHeight: 1.7, opacity: 0.4, margin: 0 }}>{step.desc}</p>
+                  <p style={{ fontSize: 13, lineHeight: 1.7, opacity: 0.6, margin: 0 }}>{step.desc}</p>
                 </div>
               </div>
             </AnimatedContent>
@@ -297,7 +297,7 @@ export default function ImpactPage() {
       {/* COMMUNITY IMPACT */}
       <section style={{ marginBottom: 80, textAlign: "left" }}>
         <AnimatedContent>
-          <p style={{ fontSize: 11, letterSpacing: 3, textTransform: "uppercase", opacity: 0.3, marginBottom: 12, fontWeight: 600 }}>
+          <p style={{ fontSize: 11, letterSpacing: 3, textTransform: "uppercase", opacity: 0.5, marginBottom: 12, fontWeight: 600 }}>
             Community Impact
           </p>
           <h2 style={{ fontFamily: "'Playfair Display', serif", fontSize: 26, fontWeight: 500, margin: "0 0 20px" }}>
@@ -320,9 +320,9 @@ export default function ImpactPage() {
                 <p style={{ fontFamily: "'Playfair Display', serif", fontSize: 36, fontWeight: 600, margin: "0 0 2px", color: "#6fcf97" }}>
                   <CountUp target={parseInt(card.stat) || 0} suffix={card.stat.includes("+") ? "+" : ""} />
                 </p>
-                <p style={{ fontSize: 10, opacity: 0.3, margin: "0 0 14px", letterSpacing: 1, textTransform: "uppercase" }}>{card.statLabel}</p>
+                <p style={{ fontSize: 10, opacity: 0.5, margin: "0 0 14px", letterSpacing: 1, textTransform: "uppercase" }}>{card.statLabel}</p>
                 <p style={{ fontSize: 15, fontWeight: 600, margin: "0 0 8px" }}>{card.title}</p>
-                <p style={{ fontSize: 13, lineHeight: 1.7, opacity: 0.4, margin: 0 }}>{card.desc}</p>
+                <p style={{ fontSize: 13, lineHeight: 1.7, opacity: 0.6, margin: 0 }}>{card.desc}</p>
               </div>
             </AnimatedContent>
           ))}
@@ -336,14 +336,14 @@ export default function ImpactPage() {
             padding: "48px 24px", borderRadius: 20,
             background: "rgba(111,207,151,0.03)", border: "1px solid rgba(111,207,151,0.08)",
           }}>
-            <p style={{ fontSize: 11, letterSpacing: 3, textTransform: "uppercase", opacity: 0.3, marginBottom: 16, fontWeight: 600 }}>
+            <p style={{ fontSize: 11, letterSpacing: 3, textTransform: "uppercase", opacity: 0.5, marginBottom: 16, fontWeight: 600 }}>
               Our Vision
             </p>
             <h2 style={{ fontFamily: "'Playfair Display', serif", fontSize: "clamp(22px, 3.5vw, 32px)", fontWeight: 500, margin: "0 0 20px", lineHeight: 1.3 }}>
               Today, glasses.<br />
               Tomorrow, <GradientText colors={["#6fcf97", "#4ecdc4", "#a8edea"]}>prosthetics for everyone.</GradientText>
             </h2>
-            <p style={{ fontSize: 14, lineHeight: 1.8, opacity: 0.4, maxWidth: 520, margin: "0 auto" }}>
+            <p style={{ fontSize: 14, lineHeight: 1.8, opacity: 0.6, maxWidth: 520, margin: "0 auto" }}>
               Team Quincers and OPTIQ are proving that recycled materials and digital fabrication can make assistive devices accessible to all. Glasses are our proof of concept. The technology, supply chain, and community partnerships we build here scale directly into prosthetic limbs, orthotics, hearing aids, and beyond.
             </p>
           </div>

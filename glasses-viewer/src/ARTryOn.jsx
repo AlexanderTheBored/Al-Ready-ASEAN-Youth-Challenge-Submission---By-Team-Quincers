@@ -988,13 +988,13 @@ export default function ARTryOn({ onBack, faceWidth, initialFrameId, initialColo
     <div style={{ width: "100%", maxWidth: 900, margin: "0 auto", padding: "0 16px 80px" }}>
       {/* Header */}
       <section style={{ paddingTop: 36, paddingBottom: 20, textAlign: "center" }}>
-        <p style={{ fontSize: 11, letterSpacing: 3, textTransform: "uppercase", opacity: 0.3, marginBottom: 10, fontWeight: 600 }}>
+        <p style={{ fontSize: 11, letterSpacing: 3, textTransform: "uppercase", opacity: 0.5, marginBottom: 10, fontWeight: 600 }}>
           Augmented Reality
         </p>
         <h1 style={{ fontFamily: "'Playfair Display', serif", fontSize: "clamp(26px, 4vw, 40px)", fontWeight: 500, margin: "0 0 8px", lineHeight: 1.2 }}>
           Virtual Try-On
         </h1>
-        <p style={{ fontSize: 13, opacity: 0.4, maxWidth: 460, margin: "0 auto" }}>
+        <p style={{ fontSize: 13, opacity: 0.6, maxWidth: 460, margin: "0 auto" }}>
           See how each frame looks on your face in real-time.
         </p>
       </section>
@@ -1034,13 +1034,13 @@ export default function ARTryOn({ onBack, faceWidth, initialFrameId, initialColo
             {status === "idle" && (
               <>
                 <div style={{ width: 80, height: 80, borderRadius: "50%", border: "2px solid rgba(255,255,255,0.1)", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 28 }}>◎</div>
-                <p style={{ fontSize: 13, opacity: 0.4 }}>Initializing AR...</p>
+                <p style={{ fontSize: 13, opacity: 0.6 }}>Initializing AR...</p>
               </>
             )}
             {status === "loading" && (
               <>
                 <div style={{ width: 36, height: 36, border: "2px solid rgba(111,207,151,0.3)", borderTopColor: "#6fcf97", borderRadius: "50%", animation: "gvSpin 0.8s linear infinite" }} />
-                <p style={{ fontSize: 13, opacity: 0.5 }}>Loading AR & Camera...</p>
+                <p style={{ fontSize: 13, opacity: 0.7 }}>Loading AR & Camera...</p>
               </>
             )}
           </div>
@@ -1070,7 +1070,7 @@ export default function ARTryOn({ onBack, faceWidth, initialFrameId, initialColo
               <circle cx="105" cy="90" r="6" fill="none" stroke="#fff" strokeWidth="1.2" />
               <path d="M70 130 Q80 140 90 130" fill="none" stroke="#fff" strokeWidth="1.2" />
             </svg>
-            <p style={{ fontSize: 12, opacity: 0.5, letterSpacing: 1.5, textTransform: "uppercase", fontWeight: 600, animation: "arPulse 2s ease-in-out infinite" }}>
+            <p style={{ fontSize: 12, opacity: 0.7, letterSpacing: 1.5, textTransform: "uppercase", fontWeight: 600, animation: "arPulse 2s ease-in-out infinite" }}>
               Position your face in frame
             </p>
           </div>
@@ -1151,7 +1151,7 @@ export default function ARTryOn({ onBack, faceWidth, initialFrameId, initialColo
 
           {/* ── Frame selector — horizontal scrollable pills ── */}
           <div style={{ marginTop: 24 }}>
-            <p style={{ fontSize: 10, letterSpacing: 2, textTransform: "uppercase", opacity: 0.3, marginBottom: 10, fontWeight: 600, textAlign: "center" }}>
+            <p style={{ fontSize: 10, letterSpacing: 2, textTransform: "uppercase", opacity: 0.5, marginBottom: 10, fontWeight: 600, textAlign: "center" }}>
               Frame Style
             </p>
             <div style={{
@@ -1190,7 +1190,7 @@ export default function ARTryOn({ onBack, faceWidth, initialFrameId, initialColo
 
           {/* ── Colour swatches ── */}
           <div style={{ marginTop: 12 }}>
-            <p style={{ fontSize: 10, letterSpacing: 2, textTransform: "uppercase", opacity: 0.3, marginBottom: 10, fontWeight: 600, textAlign: "center" }}>
+            <p style={{ fontSize: 10, letterSpacing: 2, textTransform: "uppercase", opacity: 0.5, marginBottom: 10, fontWeight: 600, textAlign: "center" }}>
               Colour — {color.name}
             </p>
             <div style={{ display: "flex", justifyContent: "center", gap: 10 }}>
