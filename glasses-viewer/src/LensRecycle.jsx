@@ -207,7 +207,7 @@ export default function LensRecycle() {
           </p>
         </AnimatedContent>
 
-        <h1 style={{ fontFamily: "'Playfair Display', serif", fontSize: "clamp(32px, 5vw, 52px)", fontWeight: 500, lineHeight: 1.15, margin: "0 0 24px" }}>
+        <h1 style={{ fontFamily: "'Playfair Display', serif", fontSize: "clamp(32px, 5vw, 52px)", fontWeight: 500, lineHeight: 1.15, margin: "0 0 24px", color: "#fff" }}>
           <BlurText text="Recycle Your Lenses." delay={100} />
         </h1>
 
@@ -249,7 +249,7 @@ export default function LensRecycle() {
             <p style={{ fontSize: 11, letterSpacing: 3, textTransform: "uppercase", opacity: 0.3, marginBottom: 12, fontWeight: 600 }}>
               Submit Your Lenses
             </p>
-            <h2 style={{ fontFamily: "'Playfair Display', serif", fontSize: 30, fontWeight: 500, margin: 0, lineHeight: 1.2 }}>
+            <h2 style={{ fontFamily: "'Playfair Display', serif", fontSize: 30, fontWeight: 500, margin: 0, lineHeight: 1.2, color: "#fff" }}>
               Recycling <GradientText colors={["#6fcf97", "#4ecdc4", "#88d8c0"]}>Request Form</GradientText>
             </h2>
           </div>
@@ -325,7 +325,7 @@ export default function LensRecycle() {
               >
                 ✓
               </motion.div>
-              <h3 style={{ fontFamily: "'Playfair Display', serif", fontSize: 26, fontWeight: 500, margin: "0 0 12px" }}>
+              <h3 style={{ fontFamily: "'Playfair Display', serif", fontSize: 26, fontWeight: 500, margin: "0 0 12px", color: "#fff" }}>
                 Submission Received!
               </h3>
               <p style={{ fontSize: 15, lineHeight: 1.8, opacity: 0.5, margin: "0 0 8px" }}>
