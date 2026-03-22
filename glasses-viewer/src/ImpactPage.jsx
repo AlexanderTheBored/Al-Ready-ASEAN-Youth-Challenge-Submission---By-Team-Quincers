@@ -329,6 +329,58 @@ export default function ImpactPage() {
         </div>
       </section>
 
+      {/* LENS RECYCLING PROGRAM */}
+      <section style={{ marginBottom: 80, textAlign: "left" }}>
+        <AnimatedContent>
+          <p style={{ fontSize: 11, letterSpacing: 3, textTransform: "uppercase", opacity: 0.55, marginBottom: 12, fontWeight: 600 }}>
+            Closing the Loop
+          </p>
+          <h2 style={{ fontFamily: "'Playfair Display', serif", fontSize: 26, fontWeight: 500, margin: "0 0 20px" }}>
+            Lens Recycling <GradientText colors={["#6fcf97", "#4ecdc4", "#88d8c0"]}>Program</GradientText>
+          </h2>
+        </AnimatedContent>
+
+        <AnimatedContent delay={0.1}>
+          <p style={{ fontSize: 15, lineHeight: 1.9, opacity: 0.65, maxWidth: 650, margin: "0 0 24px" }}>
+            Lenses are the most expensive part of any pair of glasses — and the most wasted. When prescriptions change, perfectly good lenses end up in landfills. Our recycling program collects old lenses, recovers the polycarbonate and optical coatings, and feeds them back into our supply chain.
+          </p>
+        </AnimatedContent>
+
+        <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(200px, 1fr))", gap: 16, marginBottom: 24 }}>
+          {[
+            { icon: "📦", title: "Submit", desc: "Fill out a recycling request form with your lens details — type, grade, and condition. We'll send you a prepaid shipping label." },
+            { icon: "🔬", title: "Assess", desc: "Our team inspects each lens for reusable coatings and materials. Salvageable optics are separated from the polycarbonate base." },
+            { icon: "♻", title: "Recover", desc: "Polycarbonate is ground down and reprocessed. Optical coatings that pass quality checks are reclaimed for use in new lenses." },
+          ].map((step, i) => (
+            <AnimatedContent key={i} delay={i * 0.1} style={{ display: "flex", height: "100%" }}>
+              <div style={{
+                flex: 1, padding: "24px 20px", borderRadius: 16,
+                background: "rgba(111,207,151,0.03)", border: "1px solid rgba(111,207,151,0.08)",
+                display: "flex", flexDirection: "column",
+              }}>
+                <span style={{ fontSize: 28, marginBottom: 12 }}>{step.icon}</span>
+                <p style={{ fontSize: 15, fontWeight: 600, margin: "0 0 8px" }}>{step.title}</p>
+                <p style={{ fontSize: 13, lineHeight: 1.7, opacity: 0.6, margin: 0 }}>{step.desc}</p>
+              </div>
+            </AnimatedContent>
+          ))}
+        </div>
+
+        <AnimatedContent delay={0.4}>
+          <div style={{
+            padding: "20px 24px", borderRadius: 14,
+            background: "rgba(78,205,196,0.04)", border: "1px solid rgba(78,205,196,0.1)",
+            display: "flex", alignItems: "center", gap: 16, flexWrap: "wrap",
+          }}>
+            <div style={{ flex: 1, minWidth: 200 }}>
+              <p style={{ fontSize: 14, fontWeight: 600, margin: "0 0 4px" }}>Ready to recycle your old lenses?</p>
+              <p style={{ fontSize: 12, opacity: 0.6, margin: 0 }}>Head to the <GradientText>Recycle</GradientText> tab to submit a recycling request. It takes less than a minute.</p>
+            </div>
+            <span style={{ fontSize: 24 }}>→</span>
+          </div>
+        </AnimatedContent>
+      </section>
+
       {/* CLOSING / VISION */}
       <section style={{ textAlign: "center", paddingBottom: 40 }}>
         <AnimatedContent>
