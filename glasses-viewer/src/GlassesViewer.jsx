@@ -246,7 +246,12 @@ function useParticles(ref,c){const cr=useRef(c);cr.current=c;useEffect(()=>{cons
 
 const SIZE_SCALES = [0.940, 1.0, 1.060]; // Small=126mm / Medium=134mm / Large=142mm
 
-const STEPS = ["Fit Scan","Frame","Material","Lens","Colour","Size","Summary"];
+const STEPS = ["Fit Scan","Frame","Material","Lens","Prescription","Colour","Size","Summary"];
+
+const VISION_TYPES_CFG = ["Nearsighted (Myopia)", "Farsighted (Hyperopia)", "Both / Unsure"];
+const GRADE_OPTIONS_CFG = ["Mild (up to -/+2.00)", "Moderate (-/+2.25 to -/+5.00)", "High (-/+5.25 to -/+8.00)", "Very High (over -/+8.00)", "Unsure"];
+const ASTIGMATISM_OPTIONS_CFG = ["None", "Mild", "Moderate", "Severe", "Unsure"];
+const INITIAL_RX_CFG = { visionType: "", grade: "", astigmatism: "", sph: "", cyl: "", axis: "" };
 
 function OptCard({ selected, onClick, children, style = {} }) {
   return (
@@ -297,6 +302,10 @@ export default function GlassesViewer() {
   const [lensIdx, setLensIdx] = useState(0);
   const [colorIdx, setColorIdx] = useState(0);
   const [sizeIdx, setSizeIdx] = useState(1);
+  const [differentPerEye, setDifferentPerEye] = useState(false);
+  const [rxBoth, setRxBoth] = useState({ ...INITIAL_RX_CFG });
+  const [rxOD, setRxOD] = useState({ ...INITIAL_RX_CFG });
+  const [rxOS, setRxOS] = useState({ ...INITIAL_RX_CFG });
   const [calibratedFaceWidth, setCalibratedFaceWidth] = useState(null);
   const [isCheckingOut, setIsCheckingOut] = useState(false);
   const [scanReturnStep, setScanReturnStep] = useState(null);
@@ -357,6 +366,58 @@ export default function GlassesViewer() {
       alert("Checkout error: " + err.message);
       setIsCheckingOut(false);
     }
+  };
+
+  /* ── Rx field renderer for the prescription step ── */
+  const rxInputBase = {
+    width: "100%", padding: "10px 12px", borderRadius: 8,
+    background: "rgba(255,255,255,0.06)", border: "1px solid rgba(255,255,255,0.1)",
+    color: "#fff", fontFamily: "'DM Sans', sans-serif", fontSize: 13,
+    outline: "none", boxSizing: "border-box", transition: "border-color 0.2s",
+  };
+  const rxLabelStyle = { display: "block", fontSize: 11, fontWeight: 500, letterSpacing: 0.4, opacity: 0.65, marginBottom: 5 };
+
+  const renderRxBlock = (rx, setRxFn) => {
+    const updateField = (field) => (e) => setRxFn((prev) => ({ ...prev, [field]: e.target.value }));
+    return (
+      <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12 }}>
+        <div>
+          <label style={rxLabelStyle}>Vision Type</label>
+          <select className="gv-rx-select" value={rx.visionType} onChange={updateField("visionType")} style={{ ...rxInputBase, cursor: "pointer", ...(!rx.visionType ? { opacity: 0.4 } : {}) }}>
+            <option value="">Select...</option>
+            {VISION_TYPES_CFG.map((o) => <option key={o} value={o}>{o}</option>)}
+          </select>
+        </div>
+        <div>
+          <label style={rxLabelStyle}>Grade / Severity</label>
+          <select className="gv-rx-select" value={rx.grade} onChange={updateField("grade")} style={{ ...rxInputBase, cursor: "pointer", ...(!rx.grade ? { opacity: 0.4 } : {}) }}>
+            <option value="">Select...</option>
+            {GRADE_OPTIONS_CFG.map((o) => <option key={o} value={o}>{o}</option>)}
+          </select>
+        </div>
+        <div>
+          <label style={rxLabelStyle}>Astigmatism</label>
+          <select className="gv-rx-select" value={rx.astigmatism} onChange={updateField("astigmatism")} style={{ ...rxInputBase, cursor: "pointer", ...(!rx.astigmatism ? { opacity: 0.4 } : {}) }}>
+            <option value="">Select...</option>
+            {ASTIGMATISM_OPTIONS_CFG.map((o) => <option key={o} value={o}>{o}</option>)}
+          </select>
+        </div>
+        <div>
+          <label style={rxLabelStyle}>Sphere (SPH) <span style={{ opacity: 0.5, fontWeight: 400 }}>e.g. -2.50</span></label>
+          <input className="gv-rx-input" type="text" value={rx.sph} onChange={updateField("sph")} placeholder="-2.50" style={rxInputBase} />
+        </div>
+        {rx.astigmatism && rx.astigmatism !== "None" && (<>
+          <div>
+            <label style={rxLabelStyle}>Cylinder (CYL) <span style={{ opacity: 0.5, fontWeight: 400 }}>e.g. -1.25</span></label>
+            <input className="gv-rx-input" type="text" value={rx.cyl} onChange={updateField("cyl")} placeholder="-1.25" style={rxInputBase} />
+          </div>
+          <div>
+            <label style={rxLabelStyle}>Axis <span style={{ opacity: 0.5, fontWeight: 400 }}>e.g. 180</span></label>
+            <input className="gv-rx-input" type="text" value={rx.axis} onChange={updateField("axis")} placeholder="180" style={rxInputBase} />
+          </div>
+        </>)}
+      </div>
+    );
   };
 
   const frameThumbnails = useFrameThumbnails(FRAMES, MATERIALS[0].pbr);
@@ -861,6 +922,9 @@ export default function GlassesViewer() {
         .gv-price-ticker { flex-direction: column !important; gap: 10px !important; text-align: center !important; }
         .gv-price-ticker > div { text-align: center !important; }
       }
+      .gv-rx-select { appearance: none; background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='8' viewBox='0 0 12 8'%3E%3Cpath fill='%23ffffff' opacity='0.5' d='M1 1l5 5 5-5'/%3E%3C/svg%3E"); background-repeat: no-repeat; background-position: right 12px center; padding-right: 32px; }
+      .gv-rx-select option { background: #1a1a2e; color: #fff; }
+      .gv-rx-select:focus, .gv-rx-input:focus { border-color: rgba(111,207,151,0.5) !important; }
       .gv-currency { font-weight: 500; font-size: 0.85em; vertical-align: baseline; position: relative; top: -0.05em; margin-right: 2px; }
       .gv-price-val { font-variant-numeric: lining-nums; font-feature-settings: "lnum"; display: inline-flex; align-items: baseline; }
     `;
@@ -1124,7 +1188,56 @@ export default function GlassesViewer() {
   />
 </>)}
 
+            {/* STEP 4: PRESCRIPTION */}
             {step === 4 && (<>
+              <h2 style={{ fontFamily: "'Playfair Display', serif", fontSize: isSmall ? 22 : 26, fontWeight: 500, margin: "0 0 6px" }}>Enter your prescription</h2>
+              <p style={{ fontSize: 13, opacity: 0.6, margin: "0 0 20px", lineHeight: 1.6 }}>So we can cut the right lenses for your pair. Skip if you'll provide later.</p>
+
+              {/* Toggle: same vs different per eye */}
+              <div style={{ display: "flex", alignItems: "center", gap: 12, marginBottom: 18 }}>
+                <button
+                  type="button"
+                  onClick={() => setDifferentPerEye(!differentPerEye)}
+                  style={{
+                    width: 40, height: 22, borderRadius: 11, border: "none", cursor: "pointer",
+                    background: differentPerEye ? "linear-gradient(135deg, #6fcf97, #4ecdc4)" : "rgba(255,255,255,0.12)",
+                    position: "relative", transition: "background 0.3s", flexShrink: 0,
+                  }}
+                >
+                  <div style={{
+                    width: 16, height: 16, borderRadius: "50%", background: "#fff",
+                    position: "absolute", top: 3,
+                    left: differentPerEye ? 21 : 3,
+                    transition: "left 0.25s cubic-bezier(0.23,1,0.32,1)",
+                  }} />
+                </button>
+                <span style={{ fontSize: 13, opacity: 0.7 }}>My eyes have different grades</span>
+              </div>
+
+              {!differentPerEye ? (
+                <div>
+                  <p style={{ fontSize: 10, fontWeight: 600, letterSpacing: 1.5, textTransform: "uppercase", opacity: 0.5, margin: "0 0 10px" }}>Both Eyes</p>
+                  {renderRxBlock(rxBoth, setRxBoth)}
+                </div>
+              ) : (
+                <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
+                  <div>
+                    <p style={{ fontSize: 10, fontWeight: 600, letterSpacing: 1.5, textTransform: "uppercase", opacity: 0.5, margin: "0 0 10px" }}>Right Eye <span style={{ opacity: 0.7 }}>(OD)</span></p>
+                    {renderRxBlock(rxOD, setRxOD)}
+                  </div>
+                  <div style={{ borderTop: "1px solid rgba(255,255,255,0.06)", paddingTop: 14 }}>
+                    <p style={{ fontSize: 10, fontWeight: 600, letterSpacing: 1.5, textTransform: "uppercase", opacity: 0.5, margin: "0 0 10px" }}>Left Eye <span style={{ opacity: 0.7 }}>(OS)</span></p>
+                    {renderRxBlock(rxOS, setRxOS)}
+                  </div>
+                </div>
+              )}
+
+              <p style={{ fontSize: 11, opacity: 0.45, margin: "16px 0 0", lineHeight: 1.6, textAlign: "center" }}>
+                Don't know your prescription? No worries — you can skip this step and provide it later.
+              </p>
+            </>)}
+
+            {step === 5 && (<>
               <h2 style={{ fontFamily: "'Playfair Display', serif", fontSize: isSmall ? 22 : 26, fontWeight: 500, margin: "0 0 6px" }}>Choose your colour</h2>
               <p style={{ fontSize: 13, opacity: 0.6, margin: "0 0 14px" }}>
                 {frame.url ? "Tints applied over the original design." : "Pigment mixed into the filament before printing."}
@@ -1138,8 +1251,8 @@ export default function GlassesViewer() {
               />
             </>)}
 
-            {/* STEP 5: SIZE */}
-            {step === 5 && (<>
+            {/* STEP 6: SIZE */}
+            {step === 6 && (<>
               <h2 style={{ fontFamily: "'Playfair Display', serif", fontSize: isSmall ? 22 : 26, fontWeight: 500, margin: "0 0 6px" }}>Select your size</h2>
               <p style={{ fontSize: 13, opacity: 0.6, margin: "0 0 16px" }}>3D printing means every pair can be made to measure.</p>
 
@@ -1194,8 +1307,8 @@ export default function GlassesViewer() {
               </div>
             </>)}
 
-            {/* STEP 6: SUMMARY — with AR Try-On CTA */}
-            {step === 6 && (<>
+            {/* STEP 7: SUMMARY — with AR Try-On CTA */}
+            {step === 7 && (<>
               <h2 style={{ fontFamily: "'Playfair Display', serif", fontSize: isSmall ? 22 : 26, fontWeight: 500, margin: "0 0 6px" }}>Your custom pair</h2>
               <p style={{ fontSize: 13, opacity: 0.6, margin: "0 0 16px" }}>Review your configuration before ordering.</p>
 
@@ -1205,6 +1318,7 @@ export default function GlassesViewer() {
                   ["Frame", <>{frame.name} <span style={{ opacity: 0.55, fontSize: 11 }}>{color.name}</span></>, <span className="gv-price-val" style={{ fontFamily: "'JetBrains Mono', monospace", opacity: 0.7, fontSize: 11 }}><span className="gv-currency" style={{ fontSize: "0.85em" }}>₱</span>{frame.basePrice.toLocaleString()}</span>],
                   ["Material", <>{material.name} <span style={{ opacity: 0.55, fontSize: 11 }}>{material.tag}</span></>, <span style={{ fontFamily: "'JetBrains Mono', monospace", opacity: 0.7, fontSize: 11 }}>{material.price === 0 ? "incl." : `+₱${material.price}`}</span>],
                   ["Lens", <>{lens.name}</>, <span style={{ fontFamily: "'JetBrains Mono', monospace", opacity: 0.7, fontSize: 11 }}>{lens.price === 0 ? "incl." : `+₱${lens.price}`}</span>],
+                  ["Rx", <>{(() => { const rx = differentPerEye ? rxOD : rxBoth; return rx.visionType ? <>{rx.visionType.split(" (")[0]} <span style={{ opacity: 0.55, fontSize: 11 }}>{rx.grade ? rx.grade.split(" (")[0] : ""}{rx.astigmatism && rx.astigmatism !== "None" ? ` · Astig.` : ""}</span></> : <span style={{ opacity: 0.55 }}>Not provided</span>; })()}</>, <span style={{ fontFamily: "'JetBrains Mono', monospace", opacity: 0.7, fontSize: 11 }}>{differentPerEye ? "OD/OS" : "—"}</span>],
                   ["Size", <>{size.name} <span style={{ opacity: 0.55, fontSize: 11 }}>{size.width}</span></>, <span style={{ fontFamily: "'JetBrains Mono', monospace", opacity: 0.7, fontSize: 11 }}>incl.</span>],
                 ].map(([label, value, price], i) => (
                   <div key={i} style={{ display: "contents" }}>
@@ -1295,7 +1409,7 @@ export default function GlassesViewer() {
       {page === "impact" && (<div style={{ position: "relative", zIndex: 2, flex: 1, width: "100%" }}><ImpactPage /></div>)}
       {page === "recycle" && (<div style={{ position: "relative", zIndex: 2, flex: 1, width: "100%" }}><LensRecycle /></div>)}
       {page === "scanner" && (<div style={{ position: "relative", zIndex: 2, flex: 1, width: "100%" }}><FitScanner onApplyFit={({ frameIdx: fIdx, sizeIdx: sIdx, faceWidth }) => { skipAnimRef.current = true; setFrameIdx(fIdx); setColorIdx(0); setSizeIdx(sIdx); setCalibratedFaceWidth(faceWidth); setStep(scanReturnStep != null ? scanReturnStep : 1); setScanReturnStep(null); setPage("configurator"); window.scrollTo({ top: 0, behavior: "smooth" }); }} /></div>)}
-      {page === "ar" && (<div style={{ position: "relative", zIndex: 2, flex: 1, width: "100%" }}><ARTryOn faceWidth={calibratedFaceWidth} initialFrameId={frame.id} initialColorIdx={colorIdx} onBack={() => { setPage("configurator"); setStep(6); window.scrollTo({ top: 0, behavior: "smooth" }); }} /></div>)}
+      {page === "ar" && (<div style={{ position: "relative", zIndex: 2, flex: 1, width: "100%" }}><ARTryOn faceWidth={calibratedFaceWidth} initialFrameId={frame.id} initialColorIdx={colorIdx} onBack={() => { setPage("configurator"); setStep(7); window.scrollTo({ top: 0, behavior: "smooth" }); }} /></div>)}
 
       <footer style={{ padding: isSmall ? "16px 12px" : 20, textAlign: "center", fontSize: 10, letterSpacing: 3, opacity: 0.4, textTransform: "uppercase", display: "flex", gap: isSmall ? 8 : 16, justifyContent: "center", flexWrap: "wrap", borderTop: "1px solid rgba(255,255,255,0.03)", marginTop: "auto", position: "relative", zIndex: 2 }}>
         <span>OPTIQ © 2026</span><span>·</span><span>Recycled eyewear, 3D printed for you</span>

@@ -65,10 +65,26 @@ const LENS_TYPES = ["Single Vision", "Bifocal", "Progressive / Multifocal", "Pho
 const LENS_MATERIALS = ["Glass", "Polycarbonate", "CR-39 Plastic", "Trivex", "High-Index", "Unsure"];
 const LENS_CONDITIONS = ["Good — minor scratches only", "Fair — noticeable wear", "Poor — cracked or heavily damaged"];
 
+const VISION_TYPES = ["Nearsighted (Myopia)", "Farsighted (Hyperopia)", "Both / Unsure"];
+const GRADE_OPTIONS = [
+  "Mild (up to -/+2.00)",
+  "Moderate (-/+2.25 to -/+5.00)",
+  "High (-/+5.25 to -/+8.00)",
+  "Very High (over -/+8.00)",
+  "Unsure",
+];
+const ASTIGMATISM_OPTIONS = ["None", "Mild", "Moderate", "Severe", "Unsure"];
+
+const INITIAL_RX = { visionType: "", grade: "", astigmatism: "", sph: "", cyl: "", axis: "" };
+
 const INITIAL_FORM = {
   name: "", email: "", phone: "", city: "",
   lensType: "", lensMaterial: "", lensCondition: "",
-  prescription: "", pairs: 1, notes: "",
+  differentPerEye: false,
+  rxBoth: { ...INITIAL_RX },
+  rxOD: { ...INITIAL_RX },   // right eye
+  rxOS: { ...INITIAL_RX },   // left eye
+  pairs: 1, notes: "",
 };
 
 const inputBase = {
@@ -114,6 +130,10 @@ export default function LensRecycle() {
   const set = (key) => (e) => {
     setForm((f) => ({ ...f, [key]: e.target.value }));
     if (errors[key]) setErrors((prev) => { const n = { ...prev }; delete n[key]; return n; });
+  };
+
+  const setRx = (eyeKey, field) => (e) => {
+    setForm((f) => ({ ...f, [eyeKey]: { ...f[eyeKey], [field]: e.target.value } }));
   };
 
   const validate = () => {
@@ -192,6 +212,96 @@ export default function LensRecycle() {
           rows={rows}
           style={{ ...inputBase, resize: "vertical", minHeight: 60 }}
         />
+      </div>
+    );
+  };
+
+  const renderRxFields = (eyeKey) => {
+    const rx = form[eyeKey];
+    return (
+      <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 14 }}>
+        {/* Vision Type */}
+        <div>
+          <label style={labelStyle}>Vision Type</label>
+          <select
+            className="recycle-input recycle-select"
+            value={rx.visionType}
+            onChange={setRx(eyeKey, "visionType")}
+            style={{ ...inputBase, cursor: "pointer", ...(!rx.visionType ? { opacity: 0.4 } : {}) }}
+          >
+            <option value="">Select...</option>
+            {VISION_TYPES.map((o) => <option key={o} value={o}>{o}</option>)}
+          </select>
+        </div>
+
+        {/* Grade Severity */}
+        <div>
+          <label style={labelStyle}>Grade / Severity</label>
+          <select
+            className="recycle-input recycle-select"
+            value={rx.grade}
+            onChange={setRx(eyeKey, "grade")}
+            style={{ ...inputBase, cursor: "pointer", ...(!rx.grade ? { opacity: 0.4 } : {}) }}
+          >
+            <option value="">Select...</option>
+            {GRADE_OPTIONS.map((o) => <option key={o} value={o}>{o}</option>)}
+          </select>
+        </div>
+
+        {/* Astigmatism */}
+        <div>
+          <label style={labelStyle}>Astigmatism</label>
+          <select
+            className="recycle-input recycle-select"
+            value={rx.astigmatism}
+            onChange={setRx(eyeKey, "astigmatism")}
+            style={{ ...inputBase, cursor: "pointer", ...(!rx.astigmatism ? { opacity: 0.4 } : {}) }}
+          >
+            <option value="">Select...</option>
+            {ASTIGMATISM_OPTIONS.map((o) => <option key={o} value={o}>{o}</option>)}
+          </select>
+        </div>
+
+        {/* SPH */}
+        <div>
+          <label style={labelStyle}>Sphere (SPH) <span style={{ opacity: 0.5, fontWeight: 400 }}>e.g. -2.50</span></label>
+          <input
+            className="recycle-input"
+            type="text"
+            value={rx.sph}
+            onChange={setRx(eyeKey, "sph")}
+            placeholder="-2.50"
+            style={inputBase}
+          />
+        </div>
+
+        {/* CYL — only show if astigmatism is not "None" */}
+        {rx.astigmatism && rx.astigmatism !== "None" && (
+          <>
+            <div>
+              <label style={labelStyle}>Cylinder (CYL) <span style={{ opacity: 0.5, fontWeight: 400 }}>e.g. -1.25</span></label>
+              <input
+                className="recycle-input"
+                type="text"
+                value={rx.cyl}
+                onChange={setRx(eyeKey, "cyl")}
+                placeholder="-1.25"
+                style={inputBase}
+              />
+            </div>
+            <div>
+              <label style={labelStyle}>Axis <span style={{ opacity: 0.5, fontWeight: 400 }}>e.g. 180</span></label>
+              <input
+                className="recycle-input"
+                type="text"
+                value={rx.axis}
+                onChange={setRx(eyeKey, "axis")}
+                placeholder="180"
+                style={inputBase}
+              />
+            </div>
+          </>
+        )}
       </div>
     );
   };
@@ -279,7 +389,61 @@ export default function LensRecycle() {
                 {renderSelect("lensMaterial", "Lens Material", LENS_MATERIALS)}
                 {renderSelect("lensCondition", "Lens Condition", LENS_CONDITIONS, { required: true })}
                 {renderField("pairs", "Number of Pairs", "number", { required: true, min: 1, max: 10 })}
-                {renderTextarea("prescription", "Prescription (if known)", { fullWidth: true, placeholder: "e.g. OD -2.50, OS -3.00", rows: 2 })}
+                {/* ── Prescription / Grade Section ── */}
+                <div className="full-width" style={{ borderTop: "1px solid rgba(255,255,255,0.06)", paddingTop: 20, marginTop: 4 }}>
+                  <p style={{ fontFamily: "'Playfair Display', serif", fontSize: 17, fontWeight: 500, margin: "0 0 4px", color: "#fff" }}>
+                    Lens Prescription <span style={{ fontSize: 12, opacity: 0.5, fontFamily: "'DM Sans', sans-serif", fontWeight: 400 }}>(optional)</span>
+                  </p>
+                  <p style={{ fontSize: 12, lineHeight: 1.6, opacity: 0.55, margin: "0 0 16px" }}>
+                    Helps us assess whether your lenses can be repurposed or recycled for materials.
+                  </p>
+
+                  {/* Toggle: same vs different per eye */}
+                  <div style={{ display: "flex", alignItems: "center", gap: 12, marginBottom: 18 }}>
+                    <button
+                      type="button"
+                      onClick={() => setForm((f) => ({ ...f, differentPerEye: !f.differentPerEye }))}
+                      style={{
+                        width: 40, height: 22, borderRadius: 11, border: "none", cursor: "pointer",
+                        background: form.differentPerEye ? "linear-gradient(135deg, #6fcf97, #4ecdc4)" : "rgba(255,255,255,0.12)",
+                        position: "relative", transition: "background 0.3s", flexShrink: 0,
+                      }}
+                    >
+                      <div style={{
+                        width: 16, height: 16, borderRadius: "50%", background: "#fff",
+                        position: "absolute", top: 3,
+                        left: form.differentPerEye ? 21 : 3,
+                        transition: "left 0.25s cubic-bezier(0.23,1,0.32,1)",
+                      }} />
+                    </button>
+                    <span style={{ fontSize: 13, opacity: 0.7 }}>My eyes have different grades</span>
+                  </div>
+
+                  {!form.differentPerEye ? (
+                    /* ── Single prescription (both eyes) ── */
+                    <div>
+                      <p style={{ fontSize: 11, fontWeight: 600, letterSpacing: 1.5, textTransform: "uppercase", opacity: 0.5, margin: "0 0 10px" }}>Both Eyes</p>
+                      {renderRxFields("rxBoth")}
+                    </div>
+                  ) : (
+                    /* ── Per-eye prescription ── */
+                    <div style={{ display: "flex", flexDirection: "column", gap: 20 }}>
+                      <div>
+                        <p style={{ fontSize: 11, fontWeight: 600, letterSpacing: 1.5, textTransform: "uppercase", opacity: 0.5, margin: "0 0 10px" }}>
+                          Right Eye <span style={{ opacity: 0.7 }}>(OD)</span>
+                        </p>
+                        {renderRxFields("rxOD")}
+                      </div>
+                      <div style={{ borderTop: "1px solid rgba(255,255,255,0.05)", paddingTop: 16 }}>
+                        <p style={{ fontSize: 11, fontWeight: 600, letterSpacing: 1.5, textTransform: "uppercase", opacity: 0.5, margin: "0 0 10px" }}>
+                          Left Eye <span style={{ opacity: 0.7 }}>(OS)</span>
+                        </p>
+                        {renderRxFields("rxOS")}
+                      </div>
+                    </div>
+                  )}
+                </div>
+
                 {renderTextarea("notes", "Additional Notes", { fullWidth: true, placeholder: "Any other details about your lenses...", rows: 3 })}
               </div>
 
