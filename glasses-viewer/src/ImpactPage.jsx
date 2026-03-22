@@ -143,8 +143,8 @@ export default function ImpactPage() {
         {[
           { target: 82, suffix: "%", label: "Less CO2 vs virgin plastic", color: "#6fcf97" },
           { target: 12, suffix: " caps", label: "Recycled per pair", color: "#4ecdc4" },
-          { target: 300, prefix: "₱", suffix: "", label: "Average pair cost", color: "#a8edea" },
-          { target: 15, suffix: "g", label: "Plastic per frame", color: "#6fcf97" },
+          { target: 500, prefix: "₱", suffix: "", label: "Average pair cost", color: "#a8edea" },
+          { target: 24, suffix: "g", label: "Plastic per frame", color: "#6fcf97" },
         ].map((stat, i) => (
           <AnimatedContent key={i} delay={i * 0.1} style={{ display: "flex", height: "100%" }}>
             <div style={{
