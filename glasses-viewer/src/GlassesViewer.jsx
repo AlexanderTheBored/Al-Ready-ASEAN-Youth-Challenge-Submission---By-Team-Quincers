@@ -2,6 +2,7 @@ import { useEffect, useRef, useState, useCallback, useMemo } from "react";
 import * as THREE from "three";
 import { GLTFLoader } from "three/examples/jsm/loaders/GLTFLoader";
 import ImpactPage from "./ImpactPage";
+import LensRecycle from "./LensRecycle";
 import FitScanner from "./FitScanner";
 import ARTryOn from "./ARTryOn";
 import LensPicker from "./LensPicker";
@@ -303,7 +304,7 @@ export default function GlassesViewer() {
   useEffect(() => {
     const handleNav = (e) => {
       const targetPage = e.detail;
-      if (['configurator', 'ar', 'scanner', 'impact'].includes(targetPage)) {
+      if (['configurator', 'ar', 'scanner', 'impact', 'recycle'].includes(targetPage)) {
         if (targetPage === 'configurator') setStep(0);
         setPage(targetPage);
         window.scrollTo({ top: 0, behavior: "smooth" });
@@ -892,6 +893,7 @@ export default function GlassesViewer() {
               { label: "AR Try-On", action: () => { setPage("ar"); window.scrollTo({ top: 0, behavior: "smooth" }); }, active: page === "ar" },
               { label: "AI Fit Scanner", action: () => { setScanReturnStep(null); setPage("scanner"); window.scrollTo({ top: 0, behavior: "smooth" }); }, active: page === "scanner" },
               { label: "Our Impact", action: () => { setPage("impact"); window.scrollTo({ top: 0, behavior: "smooth" }); }, active: page === "impact" },
+              { label: "Recycle", action: () => { setPage("recycle"); window.scrollTo({ top: 0, behavior: "smooth" }); }, active: page === "recycle" },
             ].map(item => (
               <button key={item.label} className="gv-nav-link" onClick={item.action || undefined}
                 style={{ background: "none", border: "none", color: "#fff", fontFamily: "'DM Sans', sans-serif", fontSize: 11, fontWeight: 500, letterSpacing: 1.5, textTransform: "uppercase", cursor: item.action ? "pointer" : "default", padding: "4px 0", opacity: item.active ? 1 : 0.3, borderBottom: item.active ? "1px solid rgba(255,255,255,0.6)" : "1px solid transparent", display: "flex", alignItems: "center", gap: 6 }}>
@@ -910,6 +912,7 @@ export default function GlassesViewer() {
               { label: "AR Try-On", action: () => { setPage("ar"); setMenuOpen(false); window.scrollTo({ top: 0, behavior: "smooth" }); }, active: page === "ar" },
               { label: "AI Fit Scanner", action: () => { setScanReturnStep(null); setPage("scanner"); setMenuOpen(false); window.scrollTo({ top: 0, behavior: "smooth" }); }, active: page === "scanner" },
               { label: "Our Impact", action: () => { setPage("impact"); setMenuOpen(false); window.scrollTo({ top: 0, behavior: "smooth" }); }, active: page === "impact" },
+              { label: "Recycle", action: () => { setPage("recycle"); setMenuOpen(false); window.scrollTo({ top: 0, behavior: "smooth" }); }, active: page === "recycle" },
             ].map(item => (
               <button key={item.label} onClick={item.action}
                 style={{ background: "none", border: "none", color: "#fff", fontFamily: "'DM Sans', sans-serif", fontSize: 14, padding: "10px 0", textAlign: "left", cursor: "pointer", letterSpacing: 1, textTransform: "uppercase", opacity: item.active ? 1 : 0.5 }}>{item.label}</button>
@@ -1290,6 +1293,7 @@ export default function GlassesViewer() {
       </div>
 
       {page === "impact" && (<div style={{ position: "relative", zIndex: 2, flex: 1, width: "100%" }}><ImpactPage /></div>)}
+      {page === "recycle" && (<div style={{ position: "relative", zIndex: 2, flex: 1, width: "100%" }}><LensRecycle /></div>)}
       {page === "scanner" && (<div style={{ position: "relative", zIndex: 2, flex: 1, width: "100%" }}><FitScanner onApplyFit={({ frameIdx: fIdx, sizeIdx: sIdx, faceWidth }) => { skipAnimRef.current = true; setFrameIdx(fIdx); setColorIdx(0); setSizeIdx(sIdx); setCalibratedFaceWidth(faceWidth); setStep(scanReturnStep != null ? scanReturnStep : 1); setScanReturnStep(null); setPage("configurator"); window.scrollTo({ top: 0, behavior: "smooth" }); }} /></div>)}
       {page === "ar" && (<div style={{ position: "relative", zIndex: 2, flex: 1, width: "100%" }}><ARTryOn faceWidth={calibratedFaceWidth} initialFrameId={frame.id} initialColorIdx={colorIdx} onBack={() => { setPage("configurator"); setStep(6); window.scrollTo({ top: 0, behavior: "smooth" }); }} /></div>)}
 

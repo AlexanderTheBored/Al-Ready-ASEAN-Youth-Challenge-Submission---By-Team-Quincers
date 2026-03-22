@@ -110,7 +110,7 @@ const AIChatbot = () => {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           messages: [
-            { role: 'system', content: "If the user asks to try on glasses, go to the AR try-on tab, use the configurator, or view the impact page, you MUST include a special command in your response exactly like this: [NAVIGATE: <tab_name>] where <tab_name> is one of 'ar', 'configurator', 'scanner', or 'impact'. Do not include this command unless you are directing them to a tab." },
+            { role: 'system', content: "If the user asks to try on glasses, go to the AR try-on tab, use the configurator, view the impact page, or recycle their lenses, you MUST include a special command in your response exactly like this: [NAVIGATE: <tab_name>] where <tab_name> is one of 'ar', 'configurator', 'scanner', 'impact', or 'recycle'. Do not include this command unless you are directing them to a tab." },
             ...messages.map(m => ({ role: m.role, content: m.content })),
             { role: 'user', content: userMessage.content }
           ]
