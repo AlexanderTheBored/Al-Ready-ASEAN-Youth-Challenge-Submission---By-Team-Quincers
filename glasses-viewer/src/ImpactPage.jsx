@@ -348,9 +348,9 @@ export default function ImpactPage() {
 
         <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(200px, 1fr))", gap: 16, marginBottom: 24 }}>
           {[
-            { icon: "📦", title: "Submit", desc: "Fill out a recycling request form with your lens details — type, grade, and condition. We'll send you a prepaid shipping label." },
-            { icon: "🔬", title: "Assess", desc: "Our team inspects each lens for reusable coatings and materials. Salvageable optics are separated from the polycarbonate base." },
-            { icon: "♻", title: "Recover", desc: "Polycarbonate is ground down and reprocessed. Optical coatings that pass quality checks are reclaimed for use in new lenses." },
+            { icon: "◇", title: "Submit", desc: "Fill out a recycling request form with your lens details — type, grade, and condition. We'll send you a prepaid shipping label." },
+            { icon: "◎", title: "Assess", desc: "Our team inspects each lens for reusable coatings and materials. Salvageable optics are separated from the polycarbonate base." },
+            { icon: "⟳", title: "Recover", desc: "Polycarbonate is ground down and reprocessed. Optical coatings that pass quality checks are reclaimed for use in new lenses." },
           ].map((step, i) => (
             <AnimatedContent key={i} delay={i * 0.1} style={{ display: "flex", height: "100%" }}>
               <div style={{
