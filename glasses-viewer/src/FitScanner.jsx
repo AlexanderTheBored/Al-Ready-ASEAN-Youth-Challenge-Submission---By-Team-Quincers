@@ -37,6 +37,19 @@ function dist(a, b, aspect = 1.333) {
   return Math.sqrt((a.x - b.x) ** 2 + ((a.y - b.y) / aspect) ** 2 + ((a.z || 0) - (b.z || 0)) ** 2);
 }
 
+/* face shape classification with dead zones to prevent boundary flicker.
+   Within ±0.02 of a threshold, cheekRatio (cheekWidth / faceWidth) breaks
+   the tie — cheekbone & temple landmarks are unaffected by eye bags. */
+function classifyFaceShape(ratio, cheekRatio) {
+  if (ratio > 0.87) return "round";
+  if (ratio > 0.83) return cheekRatio > 0.92 ? "round" : "square";
+  if (ratio > 0.80) return "square";
+  if (ratio > 0.76) return cheekRatio > 0.90 ? "square" : "oval";
+  if (ratio > 0.74) return "oval";
+  if (ratio > 0.70) return cheekRatio > 0.88 ? "oval" : "oblong";
+  return "oblong";
+}
+
 /* convert normalized landmark distance to approximate mm using Iris or Manual IPD as reference */
 /* average adult iris diameter is ~11.7mm */
 function computeMeasurements(landmarks, options = {}, aspect = 1) {
@@ -80,11 +93,7 @@ function computeMeasurements(landmarks, options = {}, aspect = 1) {
 
   /* face shape classification */
   const ratio = faceWidth / faceHeight;
-  let faceShape;
-  if (ratio > 0.85) faceShape = "round";
-  else if (ratio > 0.78) faceShape = "square";
-  else if (ratio > 0.72) faceShape = "oval";
-  else faceShape = "oblong";
+  const faceShape = classifyFaceShape(ratio, cheekWidth / faceWidth);
 
   return {
     faceWidth: Math.round(faceWidth),
@@ -393,13 +402,16 @@ export default function FitScanner({ onApplyFit }) {
 
         if (samples.length >= SAMPLES_NEEDED) {
           /* average all samples for stability */
+          const avgFaceWidth = Math.round(samples.reduce((s, m) => s + m.faceWidth, 0) / samples.length);
+          const avgCheekWidth = Math.round(samples.reduce((s, m) => s + m.cheekWidth, 0) / samples.length);
+          const avgRatio = samples.reduce((s, m) => s + parseFloat(m.ratio), 0) / samples.length;
           const avg = {
-            faceWidth: Math.round(samples.reduce((s, m) => s + m.faceWidth, 0) / samples.length),
+            faceWidth: avgFaceWidth,
             bridgeWidth: Math.round(samples.reduce((s, m) => s + m.bridgeWidth, 0) / samples.length),
             faceHeight: Math.round(samples.reduce((s, m) => s + m.faceHeight, 0) / samples.length),
-            cheekWidth: Math.round(samples.reduce((s, m) => s + m.cheekWidth, 0) / samples.length),
-            faceShape: samples[Math.floor(samples.length / 2)].faceShape,
-            ratio: (samples.reduce((s, m) => s + parseFloat(m.ratio), 0) / samples.length).toFixed(2),
+            cheekWidth: avgCheekWidth,
+            faceShape: classifyFaceShape(avgRatio, avgCheekWidth / avgFaceWidth),
+            ratio: avgRatio.toFixed(2),
           };
 
           setMeasurements(avg);
